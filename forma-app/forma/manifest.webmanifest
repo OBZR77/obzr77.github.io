@@ -1,0 +1,18 @@
+{
+  "name": "Форма — домашний тренер",
+  "short_name": "Форма",
+  "description": "Домашние тренировки с весом собственного тела: программа на 12 недель, голосовые подсказки, таймер отдыха.",
+  "lang": "ru",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d171c",
+  "theme_color": "#0d171c",
+  "categories": ["health", "fitness", "sports"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
