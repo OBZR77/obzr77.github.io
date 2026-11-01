@@ -1,0 +1,17 @@
+{
+  "name": "Форма: домашние тренировки",
+  "short_name": "Форма",
+  "description": "Программа домашних тренировок на 12 недель: расписание, таймеры, карточки упражнений, замеры.",
+  "lang": "ru",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F1F6F5",
+  "theme_color": "#0F766E",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
