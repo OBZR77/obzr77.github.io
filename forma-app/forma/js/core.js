@@ -7,8 +7,9 @@
   var KEY = 'forma.v1';
   function def() {
     return {
-      v: 1,
-      s: { start: null, voice: true, beep: true, wake: true, theme: 'auto', bands: false },
+      v: 2,
+      s: { start: null, voice: true, coach: 'full', beep: true, wake: true, theme: 'auto', bands: false, age: 50, hrRest: 60, goalMin: 30 },
+      mode: null, pos: null, cycle: 1, over: {}, custom: [], nid: 1,
       log: [], meas: [], bp: [], tests: {}, loads: {}, last: {}, checks: {}, bpAck: false
     };
   }
@@ -19,12 +20,23 @@
     }
     return a;
   }
+  /* версия 1 хранила дату старта и привязывала занятия к календарю */
+  function migrate(o) {
+    if (o.v < 2) {
+      o.v = 2;
+      if (o.s.start && !o.pos) {
+        var days = Math.round((D.today() - D.parse(o.s.start)) / 864e5), w = Math.max(0, Math.min(12, Math.floor(days / 7)));
+        o.mode = 'forma'; o.pos = { week: w, since: D.ymd(D.today()) };
+      }
+    }
+    return o;
+  }
   var S = def();
   F.store = {
     get: function () { return S; },
-    load: function () { try { var r = localStorage.getItem(KEY); if (r) S = merge(def(), JSON.parse(r)); } catch (e) { /* хранилище недоступно */ } return S; },
+    load: function () { try { var r = localStorage.getItem(KEY); if (r) S = migrate(merge(def(), JSON.parse(r))); } catch (e) { /* хранилище недоступно */ } return S; },
     save: function () { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } },
-    replace: function (o) { S = merge(def(), o); F.store.save(); },
+    replace: function (o) { S = migrate(merge(def(), o)); F.store.save(); },
     export: function () { return JSON.stringify(S); }
   };
 
@@ -40,13 +52,10 @@
   D.fmt = function (d) { return D.pad(d.getDate()) + '.' + D.pad(d.getMonth() + 1); };
   D.fmtFull = function (s) { var d = typeof s === 'string' ? D.parse(s) : s; return D.pad(d.getDate()) + '.' + D.pad(d.getMonth() + 1) + '.' + d.getFullYear(); };
   D.today = function () { var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
-  /* неделя программы для даты (0 — подготовка), null если старт не задан */
-  F.weekOf = function (date) {
-    if (!S.s.start) return null;
-    var days = Math.round((date - D.parse(S.s.start)) / 864e5);
-    return Math.floor(days / 7);
-  };
-  F.dateOf = function (week, dayIdx) { return D.add(D.parse(S.s.start), week * 7 + dayIdx); };
+  /* зоны пульса пользователя: zr(1, 2) даёт «116–139» */
+  F.zones = function () { return F.hr(S.s.age || 50, S.s.hrRest || 60); };
+  function zr(a, b) { var h = F.zones(); return h.z[a - 1][0] + '–' + h.z[(b || a) - 1][1]; }
+  F.zr = zr;
 
   /* ---------- Сборка шагов ---------- */
   var SIDES = {
@@ -59,7 +68,9 @@
     hipflexor: ['Левая нога', 'Правая нога'],
     hamstring: ['Левая нога', 'Правая нога'],
     shoulderwall: ['Левая рука', 'Правая рука'],
-    ankle: ['Левая нога', 'Правая нога']
+    ankle: ['Левая нога', 'Правая нога'],
+    tricepstretch: ['Левая рука', 'Правая рука'],
+    chest: ['Левая сторона', 'Правая сторона']
   };
   function sideNames(id) { return SIDES[id] || SIDES['default']; }
   function pick(r, wib) {
@@ -68,6 +79,7 @@
     if (wib === 3) return hi;
     return lo;
   }
+  F.pick = pick;
   function nm(id) { return E[id] ? E[id].n : id; }
   function prep(id, sub) { return { t: 'prep', sec: 5, ex: id, title: nm(id), sub: sub || 'Приготовьтесь', say: 'Приготовьтесь. ' + nm(id) }; }
   function rest(sec, sub, nextEx) { return { t: 'rest', sec: sec, title: 'Отдых', sub: sub || '', next: nextEx || null, say: 'Отдых' }; }
@@ -147,7 +159,7 @@
             });
           } else st.push(timed(m.ex, m.sec, '', { nolog: true, badge: 'Подвижность' }));
         });
-        st.push(timed('walk', 30 * 60, 'Быстрый шаг в зонах 1–2 (пульс 116–139). Можно говорить целыми фразами. Закончить раньше можно кнопкой «Дальше».', { title: 'Быстрая ходьба 30 минут', nolog: true, say: 'Быстрая ходьба. Тридцать минут', skippable: true }));
+        st.push(timed('walk', 30 * 60, 'Быстрый шаг в зонах 1–2 (пульс ' + zr(1, 2) + '). Можно говорить целыми фразами. Закончить раньше можно кнопкой «Дальше».', { title: 'Быстрая ходьба 30 минут', nolog: true, say: 'Быстрая ходьба. Тридцать минут', skippable: true }));
         if (w >= 1) st.push(info('Мини-подходы подтягиваний', F.miniPull[wi.block] + '. Это половина вашего максимума, никогда до отказа, с промежутком не меньше часа. Сделайте их на школьном турнике в течение дня.', 'Отметить выполненным', { ex: 'minipull' }));
         return st;
       });
@@ -159,7 +171,7 @@
     return mk(w + '-' + d, 'long', 'Длинное кардио и подтягивания', 'Зона 2 (60–90 мин), затем турник дома около 20 минут', 90,
       [{ ex: 'longcardio', txt: '60–90 мин, зона 2' }, { ex: 'pullup', txt: pull.sets + ' × ' + (pull.reps[0] === pull.reps[1] ? pull.reps[0] : pull.reps[0] + '–' + pull.reps[1]) }].concat(pull.neg ? [{ ex: 'negative', txt: pull.neg + ' × 1, 5 с' }] : []),
       function () {
-        var st = [timed('longcardio', 60 * 60, 'Ходьба, велосипед, зимой лыжи. Пульс 128–139, разговорный темп. Таймер на 60 минут; закончить раньше или продолжить позже можно кнопкой «Дальше».', { title: 'Длинное кардио', nolog: true, skippable: true, say: 'Длинное кардио. Зона два' })];
+        var st = [timed('longcardio', 60 * 60, 'Ходьба, велосипед, зимой лыжи. Пульс ' + zr(2) + ', разговорный темп. Таймер на 60 минут; закончить раньше или продолжить позже можно кнопкой «Дальше».', { title: 'Длинное кардио', nolog: true, skippable: true, say: 'Длинное кардио. Зона два' })];
         var items = [{ ex: 'pullup', sets: wi.deload ? Math.max(1, pull.sets - 1) : pull.sets, reps: pull.reps, rest: 180 }];
         st = st.concat(strengthSteps(items, { wib: 2, deload: false }).map(function (x) { if (x.t === 'reps') { x.target = pick(pull.reps, wi.wib); } return x; }));
         if (pull.neg) {
@@ -224,7 +236,7 @@
     if (d === 5) return longSession(w, d);
     var b = wi.block;
     if (d === 0 || d === 2) {
-      var key = d === 0 ? 'A' : 'B', items = blockItems(b)[key];
+      var key = d === 0 ? 'A' : 'B', items = F.applyOver(w + '-' + d, blockItems(b)[key]);
       var ttl = d === 0 ? 'Тренировка A: ноги и кор' : 'Тренировка B: верх, жим и тяга';
       return mk(w + '-' + d, 'strength', ttl, 'Темп указан в каждом упражнении. Запас повторений: ' + wi.rir + (wi.deload ? '. Разгрузочная неделя: меньше подходов' : ''), 55, strengthPreview(items.map(function (it) { return (it.needsBands && !st.s.bands) ? it.alt : it; })), function () {
         var arr = warmupSteps().concat(strengthSteps(items, wi));
@@ -233,11 +245,11 @@
     }
     /* пятница: C */
     if (b === 1) {
-      return mk(w + '-' + d, 'circuit', 'Тренировка C: круг 40/20', '4 раунда по 5 станций, работа 40 с, отдых 20 с. Пульс в зоне 3 (139–150)', 50,
+      return mk(w + '-' + d, 'circuit', 'Тренировка C: круг 40/20', '4 раунда по 5 станций, работа 40 с, отдых 20 с. Пульс в зоне 3 (' + zr(3) + ')', 50,
         F.circuit.map(function (e) { return { ex: e, txt: '40 с / 20 с' }; }),
         function () {
           var steps = warmupSteps();
-          steps.push(info('Круг 40/20', '4 раунда по 5 станций. 40 секунд работа, 20 секунд отдых, между раундами 2 минуты. Пульс в рабочих отрезках в зоне 3 (139–150), в конце раунда не выше 150.', 'Начать круг'));
+          steps.push(info('Круг 40/20', '4 раунда по 5 станций. 40 секунд работа, 20 секунд отдых, между раундами 2 минуты. Пульс в рабочих отрезках в зоне 3 (' + zr(3) + '), в конце раунда не выше ' + F.zones().z[2][1] + '.', 'Начать круг'));
           for (var r = 1; r <= 4; r++) {
             F.circuit.forEach(function (e, i) {
               steps.push(timed(e, 40, 'Раунд ' + r + ' из 4 · станция ' + (i + 1) + ' из 5', { badge: 'Круг', say: nm(e), load: false }));
@@ -251,14 +263,14 @@
         });
     }
     var n, secW, secR, zone, zn;
-    if (b === 2) { n = wi.wib === 4 ? 4 : 5 + wi.wib; secW = 60; secR = 90; zone = wi.wib === 4 ? 3 : 4; zn = wi.wib === 4 ? '139–150' : '150–162'; }
-    else { n = [5, 6, 6, 0][wi.wib - 1]; secW = 120; secR = 120; zone = 4; zn = '150–162'; }
+    if (b === 2) { n = wi.wib === 4 ? 4 : 5 + wi.wib; secW = 60; secR = 90; zone = wi.wib === 4 ? 3 : 4; zn = zr(zone); }
+    else { n = [5, 6, 6, 0][wi.wib - 1]; secW = 120; secR = 120; zone = 4; zn = zr(4); }
     if (n === 0) return mk(w + '-' + d, 'walk', 'Лёгкая прогулка', 'Подвижность и ходьба', 40, [{ ex: 'walk', txt: '35 мин' }], function () { return [timed('walk', 35 * 60, 'Спокойная прогулка.', { title: 'Лёгкая прогулка', nolog: true, skippable: true })]; });
     return mk(w + '-' + d, 'intervals', 'Тренировка C: интервалы без прыжков', n + ' × ' + (secW === 60 ? '1 мин' : '2 мин') + ' в зоне ' + zone + ' (' + zn + '), отдых ' + (secR === 90 ? '90 с' : '2 мин') + ' в зонах 1–2', 50,
       F.intervalFormats.map(function (e) { return { ex: e, txt: 'формат работы' }; }),
       function () {
         var steps = warmupSteps();
-        steps.push(info('Интервалы', n + ' отрезков по ' + (secW === 60 ? '1 минуте' : '2 минуты') + ' в зоне ' + zone + ' (' + zn + ' уд/мин), между ними активный отдых. Если пульс не выходит в зону или взлетает выше 162, меняйте формат или темп. При головокружении, боли в груди или необычной одышке остановитесь.', 'Начать интервалы'));
+        steps.push(info('Интервалы', n + ' отрезков по ' + (secW === 60 ? '1 минуте' : '2 минуты') + ' в зоне ' + zone + ' (' + zn + ' уд/мин), между ними активный отдых. Если пульс не выходит в зону или взлетает выше ' + F.zones().z[3][1] + ', меняйте формат или темп. При головокружении, боли в груди или необычной одышке остановитесь.', 'Начать интервалы'));
         for (var i = 1; i <= n; i++) {
           var fe = F.intervalFormats[(i - 1) % F.intervalFormats.length];
           steps.push(timed(fe, secW, 'Интервал ' + i + ' из ' + n + ' · зона ' + zone + ' (' + zn + ')', { badge: 'Интервал', say: 'Интервал ' + i + '. ' + nm(fe) }));
@@ -270,6 +282,126 @@
       });
   };
   function blockItems(b) { return F.blockItems[b]; }
+
+
+  /* ---------- Настройка занятий: переопределения подходов, повторов и отдыха ---------- */
+  F.applyOver = function (id, items) {
+    var o = (S.over || {})[id]; if (!o) return items;
+    var rm = o._rm || [];
+    return items.filter(function (it) { return rm.indexOf(it.ex) < 0; }).map(function (it) {
+      var q = o[it.ex]; if (!q) return it;
+      var r = {}; for (var k in it) r[k] = it[k];
+      if (q.sets) r.sets = q.sets;
+      if (q.n) { if (it.sec) r.sec = [q.n, q.n]; else r.reps = [q.n, q.n]; }
+      if (q.rest != null) r.rest = q.rest;
+      return r;
+    });
+  };
+  /* состав силового занятия без переопределений (для окна «Настроить») */
+  F.baseItems = function (w, d) {
+    var wi = F.weekInfo(w);
+    if (w >= 1 && w <= 12 && (d === 0 || d === 2)) return blockItems(wi.block)[d === 0 ? 'A' : 'B'].map(function (it) { return (it.needsBands && !S.s.bands) ? it.alt : it; });
+    return null;
+  };
+
+  /* ---------- Недели без привязки к календарю ---------- */
+  /* занятия недели в порядке выполнения (без дня отдыха) */
+  F.slots = function (w) {
+    var out = [];
+    for (var d = 0; d < 7; d++) { var x = F.session(w, d); if (x.kind !== 'rest') out.push({ d: d, sess: x }); }
+    return out;
+  };
+  function isDone(id) {
+    var bound = /^\d+-\d+$/.test(id);
+    for (var i = S.log.length - 1; i >= 0; i--) { var l = S.log[i]; if (l.id === id && (!bound || (l.cy || 1) === (S.cycle || 1))) return l; }
+    return null;
+  }
+  F.isDone = isDone;
+  F.weekProgress = function (w) {
+    var sl = F.slots(w), n = 0;
+    sl.forEach(function (x) { if (isDone(x.sess.id)) n++; });
+    return { done: n, total: sl.length, slots: sl };
+  };
+  /* ближайшее невыполненное занятие текущей недели */
+  F.nextSlot = function (w) {
+    var sl = F.slots(w);
+    for (var i = 0; i < sl.length; i++) if (!isDone(sl[i].sess.id)) return sl[i];
+    return null;
+  };
+  F.programPct = function () {
+    var done = 0, total = 0;
+    for (var w = 0; w <= 12; w++) { var p = F.weekProgress(w); done += p.done; total += p.total; }
+    return Math.round(done / total * 100);
+  };
+
+  /* ---------- Свои тренировки и быстрые подборки ---------- */
+  function estMin(items, warm, cool) {
+    var sec = 0;
+    items.forEach(function (it) {
+      var sides = it.side ? 2 : 1, work = it.sec ? it.sec[0] : it.reps[0] * 4;
+      sec += it.sets * sides * (work + (it.rest || 0)) + (it.side ? it.sets * 10 : 0);
+    });
+    return Math.max(1, Math.round(sec / 60 + (warm ? 8 : 0) + (cool ? 5 : 0)));
+  }
+  F.customItems = function (c) {
+    return c.items.map(function (it) {
+      var o = { ex: it.ex, sets: it.sets || 3, rest: it.rest == null ? 45 : it.rest, side: !!it.side };
+      if (it.sec) o.sec = [it.sec, it.sec]; else o.reps = [it.reps || 10, it.reps || 10];
+      return o;
+    });
+  };
+  F.customSession = function (c) {
+    var items = F.customItems(c);
+    return mk('c:' + c.id, 'custom', c.name || 'Моя тренировка', (c.warm ? 'Разминка, ' : '') + items.length + ' упражнений' + (c.cool ? ', заминка' : ''), estMin(items, c.warm, c.cool), strengthPreview(items), function () {
+      var st = [];
+      if (c.warm) st = st.concat(warmupSteps());
+      st = st.concat(strengthSteps(items, { wib: 1, deload: false }));
+      if (c.cool) st = st.concat(cooldownSteps(5));
+      return st;
+    });
+  };
+  function mobilitySteps(list) {
+    var st = [];
+    list.forEach(function (m) {
+      if (m.side) {
+        sideNames(m.ex).forEach(function (sd) {
+          if (m.sec) st.push(timed(m.ex, m.sec, sd, { side: sd, nolog: true, badge: 'Подвижность', say: nm(m.ex) + ', ' + sd.toLowerCase() }));
+          else st.push({ t: 'reps', ex: m.ex, title: nm(m.ex), target: m.reps, side: sd, set: 1, sets: 1, nolog: true, quick: true, badge: 'Подвижность', say: nm(m.ex) + ', ' + sd.toLowerCase() });
+        });
+      } else if (m.sec) st.push(timed(m.ex, m.sec, '', { nolog: true, badge: 'Подвижность' }));
+      else st.push({ t: 'reps', ex: m.ex, title: nm(m.ex), target: m.reps, set: 1, sets: 1, nolog: true, quick: true, badge: 'Подвижность', say: nm(m.ex) });
+    });
+    return st;
+  }
+  var STRETCH = [{ ex: 'quadstretch', sec: 30, side: true }, { ex: 'hamstring', sec: 40, side: true }, { ex: 'glutestretch', sec: 40, side: true }, { ex: 'chest', sec: 30, side: true }, { ex: 'tricepstretch', sec: 30, side: true }, { ex: 'child', sec: 60 }];
+  var CORE = [
+    { ex: 'deadbug', sets: 2, reps: [10, 10], rest: 30, side: true }, { ex: 'plank', sets: 3, sec: [40, 40], rest: 30 },
+    { ex: 'sideplank', sets: 2, sec: [30, 30], rest: 30, side: true }, { ex: 'revcrunch', sets: 2, reps: [12, 12], rest: 30 }, { ex: 'superman', sets: 2, reps: [10, 10], rest: 30 }
+  ];
+  F.QUICK = [
+    { key: 'warm', title: 'Разминка 8 минут', sub: 'Марш, суставы, лёгкий круг. Перед любой тренировкой.', min: 8, ex: ['march', 'joints', 'catcow', 'pausesquat', 'glute2', 'scapular'] },
+    { key: 'mob', title: 'Подвижность 10 минут', sub: 'Мягкие упражнения на суставы и растяжение, без нагрузки.', min: 10, ex: F.mobility.map(function (m) { return m.ex; }) },
+    { key: 'core', title: 'Пресс и кор 10 минут', sub: 'Без прыжков и резких движений.', min: 10, ex: CORE.map(function (m) { return m.ex; }) },
+    { key: 'stretch', title: 'Растяжка после тренировки', sub: 'Шесть упражнений, 8 минут.', min: 8, ex: STRETCH.map(function (m) { return m.ex; }) },
+    { key: 'walk', title: 'Быстрая ходьба 30 минут', sub: 'Можно закончить раньше.', min: 30, ex: ['walk'] }
+  ];
+  F.quickSession = function (key) {
+    var q = F.QUICK.filter(function (x) { return x.key === key; })[0]; if (!q) return null;
+    var prev = q.ex.map(function (e) { return { ex: e, txt: '' }; });
+    return mk('q:' + key, 'quick', q.title, q.sub, q.min, prev, function () {
+      if (key === 'warm') return warmupSteps();
+      if (key === 'mob') return mobilitySteps(F.mobility);
+      if (key === 'stretch') return mobilitySteps(STRETCH);
+      if (key === 'core') return strengthSteps(CORE, { wib: 1, deload: false });
+      return [timed('walk', 1800, 'Быстрый шаг в зонах 1–2 (пульс ' + zr(1, 2) + '). Закончить раньше можно кнопкой «Дальше».', { title: 'Быстрая ходьба 30 минут', nolog: true, skippable: true, say: 'Быстрая ходьба' })];
+    });
+  };
+  /* любое занятие по идентификатору: «неделя-слот», «c:номер», «q:ключ» */
+  F.sessById = function (id) {
+    if (id.indexOf('c:') === 0) { var c = S.custom.filter(function (x) { return 'c:' + x.id === id; })[0]; return c ? F.customSession(c) : null; }
+    if (id.indexOf('q:') === 0) return F.quickSession(id.slice(2));
+    var p = id.split('-'); return F.session(+p[0], +p[1]);
+  };
 
   F.isIntervals = function (sess) { return sess && sess.kind === 'intervals'; };
 
@@ -286,13 +418,18 @@
         o.start(); o.stop(ac.currentTime + (ms || 120) / 1000);
       } catch (e) { /* ignore */ }
     },
-    say: function (txt) {
-      if (!F.store.get().s.voice || !window.speechSynthesis || !txt) return;
+    ok: function () { return !!window.speechSynthesis && !!F.store.get().s.voice; },
+    cancel: function () { try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) { /* ignore */ } },
+    say: function (txt, o) {
+      o = o || {};
+      if (!F.store.get().s.voice || !window.speechSynthesis || !txt) { if (o.onend) setTimeout(o.onend, 0); return false; }
       try {
-        window.speechSynthesis.cancel();
-        var u = new SpeechSynthesisUtterance(txt); u.lang = 'ru-RU'; u.rate = 1;
+        if (!o.queue) window.speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance(txt); u.lang = 'ru-RU'; u.rate = o.rate || 1;
+        if (o.onend) { u.onend = o.onend; u.onerror = o.onend; }
         window.speechSynthesis.speak(u);
-      } catch (e) { /* ignore */ }
+        return true;
+      } catch (e) { if (o.onend) setTimeout(o.onend, 0); return false; }
     }
   };
   var wl = null;

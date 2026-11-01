@@ -1,4 +1,4 @@
-/* Форма: интерфейс и экран тренировки. */
+/* Форма 0.2: интерфейс и экран тренировки. */
 (function () {
   'use strict';
   var F = window.FORMA, E = F.EX, D = F.date, store = F.store;
@@ -8,18 +8,27 @@
   var now = function () { return performance.now() * SPEED; };
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
-  var V = { tab: 'today', week: null, mtab: 'body' };
+  var V = { tab: 'today', week: null, stab: 'over', lg: 'Все', lq: '' };
   var save = function () { store.save(); };
+  var VERSION = '0.2';
 
+  var ico = function (d, sw) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 2) + '" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; };
   var IC = {
-    today: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>',
-    plan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
-    meas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>',
-    more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
-    close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
-    back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
-    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
-    bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="3" height="6" rx="1"/><rect x="18" y="9" width="3" height="6" rx="1"/><path d="M6 12h12M8 7v10M16 7v10"/></svg>'
+    today: ico('<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>'),
+    prog: ico('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
+    lib: ico('<rect x="2" y="9" width="3" height="6" rx="1"/><rect x="19" y="9" width="3" height="6" rx="1"/><path d="M5 12h14M7.5 7v10M16.5 7v10"/>', 1.8),
+    stat: ico('<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'),
+    set: ico('<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'),
+    close: ico('<path d="M6 6l12 12M18 6L6 18"/>', 2.2),
+    back: ico('<path d="M15 5l-7 7 7 7"/>', 2.2),
+    info: ico('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>'),
+    bell: ico('<rect x="2" y="9" width="3" height="6" rx="1"/><rect x="19" y="9" width="3" height="6" rx="1"/><path d="M5 12h14M7.5 7v10M16.5 7v10"/>', 1.6),
+    vol: ico('<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/>'),
+    mute: ico('<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l5 6M22 9l-5 6"/>'),
+    up: ico('<path d="M6 15l6-6 6 6"/>', 2.2),
+    down: ico('<path d="M6 9l6 6 6-6"/>', 2.2),
+    plus: ico('<path d="M12 5v14M5 12h14"/>', 2.2),
+    play: ico('<path d="M7 5l12 7-12 7V5z"/>')
   };
 
   /* ---------- Тема ---------- */
@@ -33,18 +42,25 @@
   /* ---------- Вспомогательное ---------- */
   var MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
   function longDate(d) { return F.DAYS_FULL[D.dow(d)] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()]; }
-  function todayInfo() { var t = D.today(); return { t: t, w: F.weekOf(t), d: D.dow(t) }; }
-  function doneEntry(id) { for (var i = S.log.length - 1; i >= 0; i--) if (S.log[i].id === id) return S.log[i]; return null; }
+  var doneEntry = F.isDone;
+  function dateSet() { var set = {}; S.log.forEach(function (l) { set[l.date] = (set[l.date] || 0) + (l.sec || 0); }); return set; }
   function streak() {
-    var set = {}; S.log.forEach(function (l) { set[l.date] = 1; });
-    var d = D.today(), n = 0;
+    var set = dateSet(), d = D.today(), n = 0;
     if (!set[D.ymd(d)]) d = D.add(d, -1);
     while (set[D.ymd(d)]) { n++; d = D.add(d, -1); }
     return n;
   }
+  function bestStreak() {
+    var ds = Object.keys(dateSet()).sort(), best = 0, run = 0, prev = null;
+    ds.forEach(function (s) { var d = D.parse(s); if (prev && Math.round((d - prev) / 864e5) === 1) run++; else run = 1; best = Math.max(best, run); prev = d; });
+    return best;
+  }
+  function minutesOn(ymd) { var s = 0; S.log.forEach(function (l) { if (l.date === ymd) s += l.sec || 0; }); return Math.round(s / 60); }
   function fmtTime(sec) { sec = Math.max(0, Math.ceil(sec)); var m = Math.floor(sec / 60), s = sec % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
   function ytUrl(id) { return 'https://www.youtube.com/results?search_query=' + encodeURIComponent((E[id] ? E[id].q : id) + ' упражнение техника'); }
   function rangeTxt(r, unit) { return r ? (r[0] === r[1] ? r[0] : r[0] + '–' + r[1]) + (unit || '') : ''; }
+  var KIND = { strength: 'Силовая', circuit: 'Круговая', intervals: 'Интервалы', light: 'Лёгкий день', long: 'Кардио', test: 'Тест', walk: 'Прогулка', rest: 'Отдых', prep: 'Подготовка', custom: 'Своя', quick: 'Быстрая' };
+  function groupIdx(id) { return Math.max(0, F.GROUPS.indexOf(F.group(id))); }
 
   /* ---------- Диалог ---------- */
   function dialog(o) {
@@ -56,6 +72,10 @@
     });
     document.body.appendChild(el);
     var first = $('button', el); if (first) first.focus();
+  }
+  function toast(t) {
+    var el = document.createElement('div'); el.className = 'toast'; el.textContent = t; document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 2200);
   }
 
   /* ---------- Оверлеи и кнопка «Назад» ---------- */
@@ -90,6 +110,11 @@
     var pts = vals.map(function (v, i) { return [vals.length === 1 ? w / 2 : 6 + i * (w - 12) / (vals.length - 1), h - 8 - (v - min) / (max - min) * (h - 16)]; });
     return '<svg class="spark" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="График"><polyline points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>' + pts.map(function (p, i) { return i === pts.length - 1 ? '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5"/>' : ''; }).join('') + '</svg>';
   }
+  function thumb(id) {
+    var e = E[id];
+    if (e && e.media) return '<span class="th"><img alt="" src="media/' + e.media + '/' + (F.MEDIA[e.media].seq[0] + 1) + '.jpg"></span>';
+    return '<span class="th ph g' + groupIdx(id) + '">' + IC.bell + '</span>';
+  }
 
   /* ---------- Медиа-плеер кадров ---------- */
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -117,48 +142,87 @@
   function mediaBox(id, big) {
     var e = E[id];
     if (e && e.media) return '<div class="stage" data-media="' + e.media + '" data-tempo=""></div>';
-    return big ? '<div class="stage ph">' + IC.bell + '<span>Картинка появится позже.<br>Техника ниже, видео по кнопке YouTube.</span></div>' : '';
+    return big ? '<div class="stage ph">' + IC.bell + '<span>Картинки пока нет.<br>Техника ниже, видео по кнопке YouTube.</span></div>' : '';
   }
   function mountAll(root, tempo) { root.querySelectorAll('[data-media]').forEach(function (el) { mountMedia(el, el.dataset.media, tempo || el.dataset.tempo); }); }
 
-  /* ---------- Главные экраны ---------- */
-  function sessCard(sess, w, d, opts) {
-    opts = opts || {};
-    var done = doneEntry(sess.id);
-    var kindChip = { strength: 'Силовая', circuit: 'Круговая', intervals: 'Интервалы', light: 'Лёгкий день', long: 'Кардио', test: 'Тест', walk: 'Прогулка', rest: 'Отдых', prep: 'Подготовка' }[sess.kind];
-    var html = '<section class="card"><div class="row between"><span class="chip">' + esc(kindChip) + '</span>' + (done ? '<span class="chip ok">Выполнено</span>' : (sess.min ? '<span class="chip plain">≈ ' + sess.min + ' мин</span>' : '')) + '</div>' +
+  /* ---------- Занятие: карточка в списках ---------- */
+  function exRows(preview, n, withLink) {
+    return '<div class="list">' + preview.slice(0, n).map(function (p) {
+      return '<button class="item" data-a="card" data-ex="' + esc(p.ex) + '">' + thumb(p.ex) + '<div class="grow"><div class="t">' + esc(E[p.ex].n) + '</div>' + (p.txt ? '<div class="s">' + esc(p.txt) + '</div>' : '') + '</div><span class="muted">›</span></button>';
+    }).join('') + '</div>';
+  }
+  function sessCard(sess, o) {
+    o = o || {};
+    var done = doneEntry(sess.id), html = '<section class="card ' + (o.hero ? 'hero' : '') + '"><div class="row between"><span class="chip">' + esc(KIND[sess.kind] || '') + '</span>' + (done ? '<span class="chip ok">Выполнено</span>' : (sess.min ? '<span class="chip plain">≈ ' + sess.min + ' мин</span>' : '')) + '</div>' +
       '<div class="stack"><h2>' + esc(sess.title) + '</h2><p class="muted">' + esc(sess.sub) + '</p></div>';
     if (sess.preview.length) {
-      html += '<div class="list">' + sess.preview.slice(0, opts.all ? 99 : 5).map(function (p) { return '<button class="item" data-a="card" data-ex="' + esc(p.ex) + '"><div class="grow"><div class="t">' + esc(E[p.ex].n) + '</div><div class="s">' + esc(p.txt) + '</div></div><span class="muted">›</span></button>'; }).join('') + '</div>';
-      if (!opts.all && sess.preview.length > 5) html += '<button class="link" data-a="openSess" data-w="' + w + '" data-d="' + d + '">Все упражнения (' + sess.preview.length + ')</button>';
+      html += exRows(sess.preview, o.all ? 99 : 4);
+      if (!o.all && sess.preview.length > 4) html += '<button class="link" data-a="openSess" data-id="' + esc(sess.id) + '">Все упражнения (' + sess.preview.length + ')</button>';
     }
-    if (sess.kind === 'prep') html += '<button class="btn" data-a="openSess" data-w="' + w + '" data-d="' + d + '">Открыть список</button>';
-    else if (sess.kind !== 'rest') html += '<button class="btn" data-a="startSess" data-w="' + w + '" data-d="' + d + '">' + (done ? 'Повторить' : 'Начать') + '</button>';
+    if (sess.kind === 'prep') html += '<button class="btn" data-a="openSess" data-id="' + esc(sess.id) + '">Открыть список</button>';
+    else html += '<div class="row"><button class="btn grow" data-a="startSess" data-id="' + esc(sess.id) + '">' + (done ? 'Повторить' : 'Начать') + '</button><button class="btn line" data-a="openSess" data-id="' + esc(sess.id) + '">Подробнее</button></div>';
     return html + '</section>';
+  }
+  function sessRow(sess, hint) {
+    var dn = doneEntry(sess.id);
+    return '<div class="srow"><button class="dot' + (dn ? ' done' : '') + '" data-a="openSess" data-id="' + esc(sess.id) + '" aria-label="Открыть">' + (dn ? '✓' : (hint || '·')) + '</button><button class="grow tt" data-a="openSess" data-id="' + esc(sess.id) + '"><div class="t">' + esc(sess.title) + '</div><div class="s">' + (sess.min ? '≈ ' + sess.min + ' мин' : 'без нагрузки') + (dn ? ' · ' + esc(D.fmt(D.parse(dn.date))) : '') + '</div></button>' +
+      (sess.kind === 'prep' ? '' : '<button class="btn small ' + (dn ? 'line' : 'ghost') + '" data-a="startSess" data-id="' + esc(sess.id) + '">' + (dn ? 'Ещё раз' : 'Старт') + '</button>') + '</div>';
+  }
+
+  /* ---------- Вкладка «Сегодня» ---------- */
+  function weekStrip() {
+    var mon = D.monday(D.today()), set = dateSet(), t = D.ymd(D.today());
+    return '<div class="weekstrip">' + F.DAYS.map(function (n, i) {
+      var d = D.add(mon, i), y = D.ymd(d), dn = !!set[y];
+      return '<div class="day' + (y === t ? ' today' : '') + (dn ? ' done' : '') + '"><span>' + n + '</span><b>' + d.getDate() + '</b><span class="mark">' + (dn ? '✓' : '') + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function goalBar() {
+    var m = minutesOn(D.ymd(D.today())), g = S.s.goalMin || 30, p = Math.min(100, Math.round(m / g * 100));
+    return '<div class="goal"><div class="row between"><span class="small muted">Цель на сегодня</span><b>' + m + ' / ' + g + ' мин</b></div><div class="mini"><i style="width:' + p + '%"></i></div></div>';
+  }
+  function ownNext() {
+    if (!S.custom.length) return null;
+    var lastId = null;
+    for (var i = S.log.length - 1; i >= 0; i--) if (String(S.log[i].id).indexOf('c:') === 0) { lastId = S.log[i].id; break; }
+    var idx = 0;
+    if (lastId) { var k = S.custom.findIndex(function (c) { return 'c:' + c.id === lastId; }); idx = (k + 1) % S.custom.length; }
+    return S.custom[idx];
+  }
+  function quickChips() {
+    return '<div class="chips">' + F.QUICK.map(function (q) { return '<button class="qk" data-a="openSess" data-id="q:' + q.key + '"><b>' + esc(q.title) + '</b><span>' + q.min + ' мин</span></button>'; }).join('') + '</div>';
   }
 
   function vToday() {
-    var ti = todayInfo(), out = '<header class="top"><p class="kicker">' + esc(longDate(ti.t)) + '</p>';
-    if (!S.s.start) {
-      var def = ti.d === 0 ? ti.t : D.nextMonday(ti.t);
-      return out + '<h1>Форма</h1></header>' +
-        '<section class="card"><h2>Когда начинаем?</h2><p class="muted">Программа идёт 12 недель плюс неделя 0 для подготовки и замеров. Выберите понедельник, с которого начинается неделя 0. Дни можно переставлять и менять позже в настройках.</p>' +
-        '<label class="f">Понедельник недели 0<input type="date" id="startDate" value="' + D.ymd(def) + '"></label><button class="btn" data-a="setStart">Начать программу</button></section>' + safety();
+    var t = D.today(), out = '<header class="top"><p class="kicker">' + esc(longDate(t)) + '</p><div class="row between"><h1>Форма</h1><span class="chip plain">серия: ' + streak() + ' дн.</span></div></header>';
+    if (!S.mode) {
+      return out + '<section class="card"><h2>С чего начнём?</h2><p class="muted">Приложение работает без привязки к дням: пропустили тренировку, сделайте её в любой другой день. Выберите, как заниматься.</p>' +
+        '<button class="btn" data-a="startForma">Готовая программа на 12 недель</button><p class="small muted">Составлена для мужчины 50 лет: силовые, кардио, тесты, давление. Подходы и повторы можно менять.</p>' +
+        '<button class="btn line" data-a="startOwn">Своя программа</button><p class="small muted">Соберёте тренировки сами из библиотеки упражнений: подходы, повторы, время, отдых.</p></section>' + quickChips() + safety();
     }
-    var w = ti.w;
-    if (w < 0) {
-      var left = Math.round((D.parse(S.s.start) - ti.t) / 864e5);
-      return out + '<h1>Старт через ' + left + ' дн.</h1><p class="muted">Неделя 0 начинается ' + esc(D.fmtFull(S.s.start)) + '. Пока можно прочитать план и купить тонометр и резину.</p></header>' + sessCard(F.session(0, 0), 0, 0) + '<button class="btn ghost" data-a="tab" data-v="plan">Открыть план</button>' + safety();
+    if (S.mode === 'own') {
+      var c = ownNext();
+      if (!c) out += '<section class="card"><h2>Создайте первую тренировку</h2><p class="muted">Выберите упражнения в библиотеке, задайте подходы, повторы и отдых. Потом запускайте в любой день.</p><button class="btn" data-a="newCustom">Создать тренировку</button></section>';
+      else {
+        out += '<p class="kicker">Следующая по списку</p>' + sessCard(F.customSession(c), { hero: true });
+        if (S.custom.length > 1) out += '<button class="btn line" data-a="tab" data-v="prog">Выбрать другую</button>';
+      }
+      return out + '<section class="card flat"><h3>Эта неделя</h3>' + weekStrip() + goalBar() + '</section><h3 class="sec">Быстрые тренировки</h3>' + quickChips() + safety();
     }
-    if (w > 12) {
-      return out + '<h1>12 недель позади</h1></header><section class="card"><p>Проведите итоговые тесты и сравните результаты: талия, силовые показатели и самочувствие важнее одного веса. Затем составим следующий цикл.</p><button class="btn" data-a="tab" data-v="meas">Открыть замеры</button><button class="btn line" data-a="newCycle">Начать новый цикл</button></section>' + safety();
+    var w = S.pos ? S.pos.week : 0, wi = F.weekInfo(w), p = F.weekProgress(w), nx = F.nextSlot(w);
+    out += '<div class="row"><span class="chip">' + (w === 0 ? 'Неделя 0' : 'Неделя ' + w + ' из 12') + '</span><span class="chip plain">' + esc(wi.blockName) + '</span>' + (w > 0 ? '<span class="chip plain">запас ' + wi.rir + '</span>' : '') + (wi.deload ? '<span class="chip warn">разгрузка</span>' : '') + (wi.test ? '<span class="chip warn">тесты</span>' : '') + '</div>';
+    if (nx) {
+      out += '<p class="kicker">Следующая тренировка</p>' + gateNotice(nx.sess) + sessCard(nx.sess, { hero: true });
+      out += '<button class="btn line" data-a="pickOther">Выбрать другую тренировку недели</button>';
+    } else {
+      out += '<section class="card hero"><h2>' + (w >= 12 ? 'Программа пройдена' : 'Неделя ' + w + ' выполнена') + '</h2><p class="muted">' + (w >= 12 ? 'Проведите итоговые замеры и сравните результаты: талия и силовые показатели важнее одного веса.' : 'Можно перейти к неделе ' + (w + 1) + ' или сначала повторить любую тренировку.') + '</p>' + (w >= 12 ? '<button class="btn" data-a="tab" data-v="stat">Открыть прогресс</button><button class="btn line" data-a="newCycle">Начать цикл заново</button>' : '<button class="btn" data-a="nextWeek">К неделе ' + (w + 1) + '</button>') + '</section>';
     }
-    var wi = F.weekInfo(w), sess = F.session(w, ti.d);
-    out += '<h1>' + (w === 0 ? 'Неделя 0' : 'Неделя ' + w + ' из 12') + '</h1><div class="row"><span class="chip">' + esc(wi.blockName) + '</span>' + (w > 0 ? '<span class="chip plain">запас ' + wi.rir + '</span>' : '') + (wi.deload ? '<span class="chip warn">разгрузка</span>' : '') + (wi.test ? '<span class="chip warn">тесты</span>' : '') + '</div></header>';
-    out += gateNotice(sess);
-    out += sessCard(sess, w, ti.d);
-    out += '<section class="card flat"><div class="row between"><h3>Эта неделя</h3><span class="chip plain">серия: ' + streak() + ' дн.</span></div><div class="weekstrip">' +
-      F.DAYS.map(function (n, i) { var s = F.session(w, i), dn = doneEntry(s.id); return '<button class="day' + (i === ti.d ? ' today' : '') + (dn ? ' done' : '') + '" data-a="openSess" data-w="' + w + '" data-d="' + i + '" aria-label="' + esc(F.DAYS_FULL[i] + ': ' + s.title) + '"><span>' + n + '</span><b>' + F.dateOf(w, i).getDate() + '</b><span class="mark">' + (dn ? '✓' : '') + '</span></button>'; }).join('') + '</div></section>';
+    var days = S.pos && S.pos.since ? Math.round((t - D.parse(S.pos.since)) / 864e5) : 0;
+    if (nx && days >= 8 && w < 12) out += '<div class="notice">Эта неделя идёт уже ' + days + ' дн. Можно доделать пропущенное или перейти к следующей: невыполненные останутся в разделе «Программа». <button class="link" data-a="nextWeek">К неделе ' + (w + 1) + '</button></div>';
+    out += '<section class="card flat"><div class="row between"><h3>Тренировки недели</h3><span class="chip plain">' + p.done + ' из ' + p.total + '</span></div><div class="list">' + p.slots.map(function (x) { return sessRow(x.sess, F.DAYS[x.d]); }).join('') + '</div><p class="small muted">Порядок свободный. Пропущенную тренировку можно сделать в любой день.</p></section>';
+    out += '<section class="card flat"><h3>Эта неделя</h3>' + weekStrip() + goalBar() + '</section>';
+    out += '<h3 class="sec">Быстрые тренировки</h3>' + quickChips();
     var last = S.meas[S.meas.length - 1];
     if (last) out += '<section class="card flat"><h3>Последние замеры</h3><div class="kv"><span>Дата</span><b>' + esc(D.fmtFull(last.d)) + '</b></div>' + (last.w ? '<div class="kv"><span>Вес</span><b>' + last.w + ' кг</b></div>' : '') + (last.waist ? '<div class="kv"><span>Талия</span><b>' + last.waist + ' см</b></div>' : '') + (last.hr ? '<div class="kv"><span>Пульс покоя</span><b>' + last.hr + '</b></div>' : '') + '</section>';
     return out + safety();
@@ -168,30 +232,70 @@
     if (!F.isIntervals(sess)) return '';
     var g = F.bpGate();
     if (g.state === 'high') return '<div class="notice danger">Среднее давление по вашим записям ' + g.sys + '/' + g.dia + ': это от порога 135/85, принятого для домашних измерений. До интервалов сначала обратитесь к врачу. Сегодня замените занятие быстрой ходьбой в зоне 1–2.</div>';
-    if (g.state === 'few') return '<div class="notice">Интервалы начинайте только после недели домашних измерений давления: 14 записей, утро и вечер. Сейчас записано: ' + g.n + '. <button class="link" data-a="tab" data-v="meas">Открыть замеры</button></div>';
+    if (g.state === 'few') return '<div class="notice">Интервалы начинайте только после недели домашних измерений давления: 14 записей, утро и вечер. Сейчас записано: ' + g.n + '. <button class="link" data-a="goBp">Открыть давление</button></div>';
     return '';
   }
 
-  function vPlan() {
-    var ti = todayInfo(), cur = ti.w;
-    if (V.week == null) V.week = (cur != null && cur >= 0 && cur <= 12) ? cur : 0;
-    var w = V.week, wi = F.weekInfo(w), chips = '';
-    for (var i = 0; i <= 12; i++) chips += '<button class="wk' + (i === cur ? ' now' : '') + '" data-a="selWeek" data-v="' + i + '" aria-pressed="' + (i === w) + '">' + i + '</button>';
-    var out = '<header class="top"><p class="kicker">План</p><h1>' + (w === 0 ? 'Неделя 0: подготовка' : 'Неделя ' + w) + '</h1></header><div class="chips" role="group" aria-label="Недели">' + chips + '</div>';
-    out += '<section class="card flat"><div class="row"><span class="chip">' + esc(wi.blockName) + '</span>' + (w > 0 ? '<span class="chip plain">запас повторений ' + wi.rir + '</span>' : '') + (wi.deload ? '<span class="chip warn">разгрузка: меньше подходов</span>' : '') + (wi.test ? '<span class="chip warn">тесты</span>' : '') + '</div>' +
-      '<p class="small muted">' + (w === 0 ? 'Тонометр, резина, стартовые замеры и тесты.' : 'Три недели нагрузки, четвёртая лёгкая. Прогрессия сложностью, темпом и нагрузкой рюкзака, не количеством повторений.') + '</p></section>';
-    out += '<section class="card"><div class="list">';
-    for (var d = 0; d < 7; d++) {
-      var s = F.session(w, d), dn = doneEntry(s.id), isToday = (cur === w && ti.d === d);
-      out += '<button class="item" data-a="openSess" data-w="' + w + '" data-d="' + d + '"><span class="dot' + (dn ? ' done' : '') + (isToday ? ' today' : '') + '">' + F.DAYS[d] + '</span><div class="grow"><div class="t">' + esc(s.title) + '</div><div class="s">' + (S.s.start ? esc(D.fmt(F.dateOf(w, d))) + ' · ' : '') + (s.min ? '≈ ' + s.min + ' мин' : 'без нагрузки') + (dn ? ' · выполнено' : '') + '</div></div><span class="muted">›</span></button>';
+  /* ---------- Вкладка «Программа» ---------- */
+  function customRows() {
+    if (!S.custom.length) return '<p class="muted small">Своих тренировок пока нет.</p>';
+    return '<div class="list">' + S.custom.map(function (c) {
+      var s = F.customSession(c), dn = doneEntry(s.id);
+      return '<div class="srow"><button class="dot' + (dn ? ' done' : '') + '" data-a="openSess" data-id="' + esc(s.id) + '">' + (dn ? '✓' : '▶') + '</button><button class="grow tt" data-a="openSess" data-id="' + esc(s.id) + '"><div class="t">' + esc(s.title) + '</div><div class="s">' + c.items.length + ' упр. · ≈ ' + s.min + ' мин</div></button><button class="btn small ghost" data-a="startSess" data-id="' + esc(s.id) + '">Старт</button></div>';
+    }).join('') + '</div>';
+  }
+  function vProg() {
+    var out = '<header class="top"><p class="kicker">Программа</p><h1>' + (S.mode === 'own' ? 'Мои тренировки' : 'План и тренировки') + '</h1></header>';
+    if (S.mode !== 'own') {
+      var cur = S.pos ? S.pos.week : 0;
+      if (V.week == null) V.week = S.mode ? cur : 0;
+      var w = V.week, wi = F.weekInfo(w), p = F.weekProgress(w), chips = '';
+      for (var i = 0; i <= 12; i++) { var pp = F.weekProgress(i); chips += '<button class="wk' + (i === cur && S.mode ? ' now' : '') + (pp.done === pp.total ? ' full' : '') + '" data-a="selWeek" data-v="' + i + '" aria-pressed="' + (i === w) + '">' + i + '</button>'; }
+      out += '<div class="chips" role="group" aria-label="Недели">' + chips + '</div>';
+      out += '<section class="card flat"><div class="row"><span class="chip">' + esc(wi.blockName) + '</span>' + (w > 0 ? '<span class="chip plain">запас повторений ' + wi.rir + '</span>' : '') + (wi.deload ? '<span class="chip warn">разгрузка: меньше подходов</span>' : '') + (wi.test ? '<span class="chip warn">тесты</span>' : '') + '<span class="chip plain">выполнено ' + p.done + ' из ' + p.total + '</span></div>' +
+        '<p class="small muted">' + (w === 0 ? 'Тонометр, резина, стартовые замеры и тесты.' : 'Три недели нагрузки, четвёртая лёгкая. Прогрессия сложностью, темпом и нагрузкой, не числом повторений.') + ' Тренировки можно делать в любом порядке и в любые дни.</p>' +
+        (S.mode && w !== cur ? '<button class="btn small line" data-a="setWeek" data-v="' + w + '">Сделать неделю ' + w + ' текущей</button>' : '') + '</section>';
+      out += '<section class="card"><div class="list">' + p.slots.map(function (x) { return sessRow(x.sess, F.DAYS[x.d]); }).join('') + '</div></section>';
+      if (!S.mode) out += '<div class="notice info">Чтобы начать программу, выберите её на вкладке «Сегодня».</div>';
     }
-    return out + '</div></section>';
+    out += '<section class="card"><div class="row between"><h2>Мои тренировки</h2><button class="btn small" data-a="newCustom">Создать</button></div>' + customRows() + '</section>';
+    out += '<section class="card"><h2>Быстрые тренировки</h2><div class="list">' + F.QUICK.map(function (q) { return '<div class="srow"><button class="grow tt" data-a="openSess" data-id="q:' + q.key + '"><div class="t">' + esc(q.title) + '</div><div class="s">' + esc(q.sub) + '</div></button><button class="btn small ghost" data-a="startSess" data-id="q:' + q.key + '">Старт</button></div>'; }).join('') + '</div></section>';
+    return out;
   }
 
-  function vMeas() {
-    var out = '<header class="top"><p class="kicker">Замеры</p><h1>Показатели</h1></header><div class="seg" role="group" aria-label="Раздел">' +
-      [['body', 'Вес и талия'], ['bp', 'Давление'], ['tests', 'Тесты']].map(function (x) { return '<button data-a="mtab" data-v="' + x[0] + '" aria-pressed="' + (V.mtab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
-    if (V.mtab === 'body') {
+  /* ---------- Вкладка «Упражнения» ---------- */
+  function vLib() {
+    return '<header class="top"><p class="kicker">Библиотека</p><h1>Упражнения</h1></header>' + libShell('lib');
+  }
+  function libShell(ns) {
+    var chips = ['Все'].concat(F.GROUPS).map(function (g) { return '<button class="wk wide" data-a="lgrp" data-ns="' + ns + '" data-v="' + esc(g) + '" aria-pressed="' + (V.lg === g) + '">' + esc(g) + '</button>'; }).join('');
+    return '<input type="search" id="lq_' + ns + '" class="search" placeholder="Поиск упражнения" aria-label="Поиск упражнения" value="' + esc(V.lq) + '"><div class="chips" role="group" aria-label="Группы мышц">' + chips + '</div><div id="llist_' + ns + '"></div>';
+  }
+  function fillLib(ns, sel, act) {
+    var box = $('#llist_' + ns); if (!box) return;
+    var q = V.lq.trim().toLowerCase(), ids = F.libIds().filter(function (id) {
+      var e = E[id]; if (V.lg !== 'Все' && F.group(id) !== V.lg) return false;
+      return !q || (e.n + ' ' + e.m.join(' ') + ' ' + e.s.join(' ')).toLowerCase().indexOf(q) >= 0;
+    }).sort(function (a, b) { return E[a].n.localeCompare(E[b].n, 'ru'); });
+    if (!ids.length) { box.innerHTML = '<p class="muted center">Ничего не найдено.</p>'; return; }
+    box.innerHTML = '<section class="card"><div class="list">' + ids.map(function (id) {
+      var chk = sel ? '<span class="cb' + (sel.indexOf(id) >= 0 ? ' on' : '') + '">' + (sel.indexOf(id) >= 0 ? '✓' : '') + '</span>' : '<span class="muted">›</span>';
+      return '<button class="item" data-a="' + act + '" data-ex="' + id + '">' + thumb(id) + '<div class="grow"><div class="t">' + esc(E[id].n) + '</div><div class="s">' + esc(E[id].m.join(', ')) + '</div></div>' + chk + '</button>';
+    }).join('') + '</div></section>';
+  }
+
+  /* ---------- Вкладка «Прогресс» ---------- */
+  function vStat() {
+    var out = '<header class="top"><p class="kicker">Прогресс</p><h1>Итоги и замеры</h1></header><div class="seg scroll" role="group" aria-label="Раздел">' +
+      [['over', 'Обзор'], ['body', 'Вес и талия'], ['bp', 'Давление'], ['tests', 'Тесты']].map(function (x) { return '<button data-a="stab" data-v="' + x[0] + '" aria-pressed="' + (V.stab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
+    if (V.stab === 'over') {
+      var tot = 0; S.log.forEach(function (l) { tot += l.sec || 0; });
+      out += '<div class="tiles"><div class="tile"><b>' + S.log.length + '</b><span>тренировок</span></div><div class="tile"><b>' + Math.round(tot / 60) + '</b><span>минут</span></div><div class="tile"><b>' + streak() + '</b><span>серия, дней</span></div><div class="tile"><b>' + bestStreak() + '</b><span>рекорд серии</span></div></div>';
+      out += '<section class="card flat"><h3>Эта неделя</h3>' + weekStrip() + goalBar() + '</section>';
+      if (S.mode === 'forma') out += '<section class="card flat"><div class="row between"><h3>Программа 12 недель</h3><b>' + F.programPct() + '%</b></div><div class="mini"><i style="width:' + F.programPct() + '%"></i></div><p class="small muted">Неделя ' + (S.pos ? S.pos.week : 0) + '. Процент считается по выполненным тренировкам.</p></section>';
+      out += '<section class="card flat"><h3>История</h3>' + (S.log.length ? '<div class="list">' + S.log.slice(-15).reverse().map(function (l) { return '<div class="item"><div class="grow"><div class="t">' + esc(l.title) + '</div><div class="s">' + esc(D.fmtFull(l.date)) + ' · ' + Math.max(1, Math.round((l.sec || 0) / 60)) + ' мин' + (l.rir != null ? ' · запас ' + l.rir : '') + '</div></div></div>'; }).join('') + '</div>' : '<p class="muted">Пока пусто. Первая тренировка появится здесь.</p>') + '</section>';
+    }
+    if (V.stab === 'body') {
       var today = D.ymd(D.today()), cur = S.meas.filter(function (m) { return m.d === today; })[0] || {};
       out += '<section class="card"><h2>Утро, натощак</h2><div class="grid3"><label class="f">Вес, кг<input type="number" step="0.1" inputmode="decimal" id="m_w" value="' + (cur.w || '') + '"></label><label class="f">Талия, см<input type="number" step="0.5" inputmode="decimal" id="m_waist" value="' + (cur.waist || '') + '"></label><label class="f">Пульс покоя<input type="number" step="1" inputmode="numeric" id="m_hr" value="' + (cur.hr || '') + '"></label></div><p class="small muted">Талия: на уровне пупка, на выдохе. Пульс: утром лёжа.</p><button class="btn" data-a="saveMeas">Сохранить за сегодня</button></section>';
       [['w', 'Вес, кг'], ['waist', 'Талия, см'], ['hr', 'Пульс покоя']].forEach(function (c) {
@@ -202,7 +306,7 @@
       });
       if (S.meas.length) out += '<section class="card flat"><h3>Записи</h3><div class="list">' + S.meas.slice(-8).reverse().map(function (m) { return '<div class="item"><div class="grow"><div class="t">' + esc(D.fmtFull(m.d)) + '</div><div class="s">' + [m.w ? m.w + ' кг' : '', m.waist ? 'талия ' + m.waist + ' см' : '', m.hr ? 'пульс ' + m.hr : ''].filter(Boolean).join(' · ') + '</div></div><button class="link" data-a="delMeas" data-d="' + m.d + '">Удалить</button></div>'; }).join('') + '</div></section>';
     }
-    if (V.mtab === 'bp') {
+    if (V.stab === 'bp') {
       var g = F.bpGate(), b14 = S.bp.slice(-14);
       out += '<section class="card"><h2>Домашнее давление</h2><p class="muted small">Плечевой тонометр, сидя после 5 минут покоя, два измерения с интервалом минута. Неделя: утром и вечером, 14 записей. Здесь можно записать среднее из двух.</p><div class="grid3"><label class="f">Верхнее<input type="number" inputmode="numeric" id="b_s"></label><label class="f">Нижнее<input type="number" inputmode="numeric" id="b_d"></label><label class="f">Когда<select id="b_t"><option value="утро">Утро</option><option value="вечер">Вечер</option></select></label></div><button class="btn" data-a="saveBp">Записать</button></section>';
       var msg = '';
@@ -212,102 +316,202 @@
         msg = '<div class="kv"><span>Записей в расчёте</span><b>' + b14.length + ' из 14</b></div><div class="kv"><span>Среднее</span><b>' + sy + '/' + di + '</b></div>';
         if (b14.length >= 14) msg += (g.state === 'high' ? '<div class="notice danger">Среднее от порога 135/85 для домашних измерений. До интервалов сначала врач. Приложение диагнозов не ставит.</div>' : '<div class="notice info">Среднее ниже порога 135/85 для домашних измерений (ESC/ESH). Интервалы разрешены, если самочувствие в порядке.</div>');
         else msg += '<p class="small muted">Для вывода нужно 14 записей.</p>';
-      } else msg = '<p class="muted">Записей пока нет. Весной было 130/85.</p>';
+      } else msg = '<p class="muted">Записей пока нет.</p>';
       out += '<section class="card flat"><h3>Среднее за неделю</h3>' + msg + '</section>';
       if (S.bp.length) out += '<section class="card flat"><h3>Записи</h3><div class="list">' + S.bp.slice(-10).reverse().map(function (m, i) { var idx = S.bp.length - 1 - i; return '<div class="item"><div class="grow"><div class="t">' + m.sys + '/' + m.dia + ' · ' + esc(m.when) + '</div><div class="s">' + esc(D.fmtFull(m.d)) + '</div></div><button class="link" data-a="delBp" data-v="' + idx + '">Удалить</button></div>'; }).join('') + '</div></section>';
     }
-    if (V.mtab === 'tests') {
-      out += '<section class="card"><h2>Тесты</h2><p class="small muted">Недели 0, 4, 8, 12. Порядок в день теста: отжимания, через 5 минут пресс, через 5 минут планка. Подтягивания и ноги в отдельные дни. Планка в секундах.</p><div class="scroll-x"><table class="tbl"><thead><tr><th>Показатель</th>' + F.TEST_WEEKS.map(function (w) { return '<th>Нед. ' + w + '</th>'; }).join('') + '</tr></thead><tbody>' +
-        F.TEST_FIELDS.map(function (f) { return '<tr><td>' + esc(f.n) + '<div class="small muted">' + f.u + '</div></td>' + F.TEST_WEEKS.map(function (w) { var v = (S.tests[w] || {})[f.k]; return '<td><input type="number" inputmode="numeric" data-t="' + f.k + '" data-w="' + w + '" value="' + (v == null ? '' : v) + '" aria-label="' + esc(f.n + ', неделя ' + w) + '"></td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div><p class="small muted">Старт: отжимания 50, пресс 52 (сентябрь), планка 3 мин (180 с), подтягивания 3–4, наклон +23 см.</p></section>';
+    if (V.stab === 'tests') {
+      out += '<section class="card"><h2>Тесты</h2><p class="small muted">Недели 0, 4, 8, 12 готовой программы. Порядок в день теста: отжимания, через 5 минут пресс, через 5 минут планка. Подтягивания и ноги в отдельные дни. Планка в секундах. Значения можно вводить и вручную.</p><div class="scroll-x"><table class="tbl"><thead><tr><th>Показатель</th>' + F.TEST_WEEKS.map(function (w) { return '<th>Нед. ' + w + '</th>'; }).join('') + '</tr></thead><tbody>' +
+        F.TEST_FIELDS.map(function (f) { return '<tr><td>' + esc(f.n) + '<div class="small muted">' + f.u + '</div></td>' + F.TEST_WEEKS.map(function (w) { var v = (S.tests[w] || {})[f.k]; return '<td><input type="number" inputmode="numeric" data-t="' + f.k + '" data-w="' + w + '" value="' + (v == null ? '' : v) + '" aria-label="' + esc(f.n + ', неделя ' + w) + '"></td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></section>';
     }
     return out;
   }
 
-  function vMore() {
+  /* ---------- Вкладка «Настройки» ---------- */
+  function vSet() {
     var sw = function (k, t, sub) { return '<label class="switch"><span><b>' + t + '</b>' + (sub ? '<div class="small muted">' + sub + '</div>' : '') + '</span><input type="checkbox" data-a="tog" data-k="' + k + '"' + (S.s[k] ? ' checked' : '') + '></label>'; };
-    var out = '<header class="top"><p class="kicker">Ещё</p><h1>Настройки</h1></header>';
-    out += '<section class="card"><h2>Программа</h2><label class="f">Понедельник недели 0<input type="date" id="startDate2" value="' + (S.s.start || '') + '" data-a="chgStart"></label>' + sw('bands', 'Есть резина с дверным креплением', 'Если нет, тяга резиной заменяется на Y-T-W лёжа') + '</section>';
-    out += '<section class="card"><h2>Во время тренировки</h2>' + sw('voice', 'Голосовые подсказки', 'Нужен русский голос в настройках Android') + sw('beep', 'Звуковые сигналы', 'Отсчёт трёх последних секунд') + sw('wake', 'Не гасить экран') + '</section>';
-    out += '<section class="card"><h2>Тема</h2><div class="seg" role="group" aria-label="Тема">' + [['auto', 'Как в системе'], ['light', 'Светлая'], ['dark', 'Тёмная']].map(function (x) { return '<button data-a="theme" data-v="' + x[0] + '" aria-pressed="' + (S.s.theme === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></section>';
-    out += '<section class="card"><h2>Справочник</h2><button class="btn ghost" data-a="lib">Упражнения (' + Object.keys(E).length + ')</button><button class="btn ghost" data-a="zones">Зоны пульса</button></section>';
+    var segm = function (a, items, cur) { return '<div class="seg" role="group">' + items.map(function (x) { return '<button data-a="' + a + '" data-v="' + x[0] + '" aria-pressed="' + (cur === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>'; };
+    var out = '<header class="top"><p class="kicker">Настройки</p><h1>Приложение</h1></header>';
+    out += '<section class="card"><h2>Программа</h2>' + segm('mode', [['forma', 'Готовая 12 недель'], ['own', 'Своя']], S.mode) + (S.mode === 'forma' ? '<label class="f">Текущая неделя<select data-pos>' + [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (w) { return '<option value="' + w + '"' + ((S.pos ? S.pos.week : 0) === w ? ' selected' : '') + '>' + (w === 0 ? 'Неделя 0: подготовка' : 'Неделя ' + w) + '</option>'; }).join('') + '</select></label><div class="small muted">Неделя меняется кнопкой на экране «Сегодня» или здесь. Даты не нужны.</div>' + sw('bands', 'Есть резина с дверным креплением', 'Если нет, тяга резиной заменяется на Y-T-W лёжа') + '<button class="btn line" data-a="newCycle">Начать программу заново</button>' : '<p class="small muted">Готовая программа не используется. Тренировки берутся из раздела «Программа → Мои тренировки».</p>') + '</section>';
+    out += '<section class="card"><h2>Голосовой тренер</h2>' + sw('voice', 'Голос', 'Нужен русский голос синтеза речи в Android') +
+      '<div class="stack"><b>Подсказки по технике</b>' + segm('coach', [['off', 'Выкл'], ['short', 'Кратко'], ['full', 'Подробно']], S.s.coach) + '<div class="small muted">Во время упражнения голос говорит, как делать его правильно, а выделенная строка на экране показывает, что звучит сейчас.</div></div>' +
+      '<button class="btn ghost" data-a="testVoice">Проверить голос</button>' + sw('beep', 'Звуковые сигналы', 'Отсчёт трёх последних секунд') + sw('wake', 'Не гасить экран') + '</section>';
+    var hr = F.zones();
+    out += '<section class="card"><h2>Ваши данные</h2><div class="grid3"><label class="f">Возраст<input type="number" inputmode="numeric" data-set="age" min="14" max="90" value="' + (S.s.age || 50) + '"></label><label class="f">Пульс покоя<input type="number" inputmode="numeric" data-set="hrRest" min="35" max="110" value="' + (S.s.hrRest || 60) + '"></label><label class="f">Цель, мин/день<input type="number" inputmode="numeric" data-set="goalMin" min="5" max="240" value="' + (S.s.goalMin || 30) + '"></label></div><p class="small muted">Максимальный пульс ' + hr.max + ' (формула Танака). Зоны считаются по методу Карвонена и подставляются в тренировки.</p><button class="btn ghost" data-a="zones">Зоны пульса</button></section>';
+    out += '<section class="card"><h2>Тема</h2>' + segm('theme', [['auto', 'Как в системе'], ['light', 'Светлая'], ['dark', 'Тёмная']], S.s.theme) + '</section>';
     out += '<section class="card"><h2>Данные</h2><p class="small muted">Всё хранится на этом устройстве. Скопируйте текст в надёжное место для резервной копии или вставьте сохранённый ранее.</p><textarea id="bk" spellcheck="false" aria-label="Резервная копия"></textarea><div class="row"><button class="btn small ghost" data-a="exp">Показать данные</button><button class="btn small ghost" data-a="copy">Копировать</button><button class="btn small line" data-a="imp">Загрузить из текста</button></div><div id="bkmsg" class="small muted"></div></section>';
-    out += '<section class="card flat"><h3>О программе</h3><p class="small muted">Форма, версия 0.1. Программа составлена по данным Александра и открытым рекомендациям: ВОЗ 2020, ACSM 2009, ESC/ESH 2018, Tanaka 2001. Расчёты питания и зон пульса оценочные. Приложение не ставит диагнозов и не заменяет врача.</p></section>';
+    out += '<section class="card flat"><h3>О программе</h3><p class="small muted">Форма, версия ' + VERSION + '. Готовая программа составлена по данным Александра и открытым рекомендациям: ВОЗ 2020, ACSM 2009, ESC/ESH 2018, Tanaka 2001. Расчёты пульсовых зон оценочные. Приложение не ставит диагнозов и не заменяет врача.</p></section>';
     return out;
   }
 
   function render() {
     applyTheme();
-    var f = { today: vToday, plan: vPlan, meas: vMeas, more: vMore }[V.tab];
+    var f = { today: vToday, prog: vProg, lib: vLib, stat: vStat, set: vSet }[V.tab];
     var app = $('#app'), keep = window.scrollY;
     app.innerHTML = '<main class="page">' + f() + '</main>';
     document.querySelectorAll('.tabbar button').forEach(function (b) { if (b.dataset.v === V.tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+    if (V.tab === 'lib') fillLib('lib', null, 'card');
     window.scrollTo(0, keep);
   }
 
   /* ---------- Карточка упражнения ---------- */
+  function cuesList(id, cls) {
+    return '<ol class="cues ' + (cls || '') + '">' + F.cues(id).map(function (c, i) { return '<li data-i="' + i + '">' + esc(c) + '</li>'; }).join('') + '</ol>';
+  }
   function openCard(id, ctx) {
     var e = E[id]; if (!e) return;
     var last = S.last[id], el = document.createElement('div');
     el.innerHTML = '<div class="sheet"><div class="bar"><button class="iconbtn" data-a="back" aria-label="Назад">' + IC.back + '</button><h2 class="grow">' + esc(e.n) + '</h2></div>' +
       mediaBox(id, true) +
-      '<section class="card"><h3>Как делать</h3><p>' + esc(e.how) + '</p>' + (ctx && ctx.tempo ? '<div class="notice info">Темп ' + esc(ctx.tempo) + ': первая цифра секунды опускания (самая тяжёлая часть), вторая пауза, третья подъём.</div>' : '') + '<p class="small muted">Дышите ровно, выдох на усилии, дыхание не задерживайте. При боли в суставе остановитесь и замените упражнение.</p></section>' +
+      '<section class="card"><div class="row between"><h3>Как делать</h3>' + (F.audio.ok() ? '<button class="btn small ghost" data-a="sayCard" data-ex="' + id + '">' + IC.vol + ' Озвучить</button>' : '') + '</div>' + cuesList(id) + (ctx && ctx.tempo ? '<div class="notice info">Темп ' + esc(ctx.tempo) + ': первая цифра секунды опускания (самая тяжёлая часть), вторая пауза, третья подъём.</div>' : '') + '<p class="small muted">Дышите ровно, выдох на усилии, дыхание не задерживайте. При боли в суставе остановитесь и замените упражнение.</p></section>' +
       '<section class="card"><h3>Область внимания</h3><div class="row">' + e.m.map(function (m) { return '<span class="chip">' + esc(m) + '</span>'; }).join('') + e.s.map(function (m) { return '<span class="chip plain">' + esc(m) + '</span>'; }).join('') + '</div></section>' +
       (last ? '<section class="card flat"><h3>Прошлый раз</h3><p>' + esc(D.fmtFull(last.date)) + ': ' + last.reps.join(' · ') + ' повторений' + (last.kg ? ', ' + last.kg + ' кг' : '') + '</p></section>' : '') +
-      '<a class="btn ghost block" style="text-align:center;text-decoration:none;display:block" href="' + ytUrl(id) + '" target="_blank" rel="noopener">Смотреть на YouTube</a></div>';
+      '<a class="btn ghost block ytlink" href="' + ytUrl(id) + '" target="_blank" rel="noopener">Смотреть на YouTube</a></div>';
     pushOv(el, 'card'); mountAll(el, ctx && ctx.tempo);
   }
 
-  function openSess(w, d) {
-    var s = F.session(w, d), el = document.createElement('div'), body = '';
+  /* ---------- Лист занятия ---------- */
+  function openSess(id) {
+    if (!F.sessById(id)) return;
+    var el = document.createElement('div'); fillSess(el, id); pushOv(el, 'sess');
+  }
+  function fillSess(el, id) {
+    var s = F.sessById(id); if (!s) return;
+    var body = '', sub = '';
+    var isBuilt = /^\d+-\d+$/.test(id), w = 0, d = 0;
+    if (isBuilt) { var p = id.split('-'); w = +p[0]; d = +p[1]; sub = 'Неделя ' + w + ' · обычно ' + F.DAYS_FULL[d].toLowerCase(); }
+    else if (id.indexOf('c:') === 0) sub = 'Моя тренировка'; else sub = 'Быстрая тренировка';
     if (s.kind === 'prep') {
-      var tasks = [['tono', 'Купить плечевой тонометр'], ['bp7', '7 дней измерять давление утром и вечером (раздел «Замеры → Давление»)'], ['bands', 'Купить набор резин разной жёсткости с дверным креплением'], ['bar', 'Дверной распорный турник, по желанию (проверьте проём и нагрузку)'], ['hrmax', 'Посмотреть максимальный пульс в часах; если выше 173, использовать своё значение'], ['meas', 'Утром натощак: вес, пульс покоя лёжа, талия (раздел «Замеры»)'], ['photo', 'Фото в профиль для сравнения']];
+      var tasks = [['tono', 'Купить плечевой тонометр'], ['bp7', '7 дней измерять давление утром и вечером (раздел «Прогресс → Давление»)'], ['bands', 'Купить набор резин разной жёсткости с дверным креплением'], ['bar', 'Дверной распорный турник, по желанию (проверьте проём и нагрузку)'], ['hrmax', 'Посмотреть максимальный пульс в часах; если отличается от расчётного, использовать своё значение'], ['meas', 'Утром натощак: вес, пульс покоя лёжа, талия (раздел «Прогресс → Вес и талия»)'], ['photo', 'Фото в профиль для сравнения']];
       body = '<section class="card"><h3>Список подготовки</h3>' + tasks.map(function (t) { return '<label class="switch"><span>' + esc(t[1]) + '</span><input type="checkbox" data-a="chk" data-k="' + t[0] + '"' + (S.checks[t[0]] ? ' checked' : '') + '></label>'; }).join('') + '</section><button class="btn" data-a="goMeas">Открыть замеры</button>';
     } else {
-      body = gateNotice(s) + '<section class="card"><p class="muted">' + esc(s.sub) + '</p>' + (s.preview.length ? '<div class="list">' + s.preview.map(function (p) { return '<button class="item" data-a="card" data-ex="' + esc(p.ex) + '"><div class="grow"><div class="t">' + esc(E[p.ex].n) + '</div><div class="s">' + esc(p.txt) + '</div></div><span class="muted">›</span></button>'; }).join('') + '</div>' : '') + '</section>' + (s.kind !== 'rest' ? '<div class="cta"><button class="btn block" data-a="startSess" data-w="' + w + '" data-d="' + d + '">Начать</button></div>' : '');
+      var tools = '';
+      if (isBuilt && F.baseItems(w, d)) tools = '<div class="row"><button class="btn small ghost" data-a="cfg" data-id="' + id + '">Настроить подходы</button><button class="btn small line" data-a="saveAsOwn" data-id="' + id + '">Сохранить как свою</button></div>' + (S.over[id] ? '<div class="small muted">Настройки изменены. <button class="link" data-a="cfgReset" data-id="' + id + '">Сбросить</button></div>' : '');
+      if (id.indexOf('c:') === 0) tools = '<div class="row"><button class="btn small ghost" data-a="editCustom" data-id="' + id.slice(2) + '">Изменить</button><button class="btn small line" data-a="dupCustom" data-id="' + id.slice(2) + '">Копия</button></div>';
+      body = gateNotice(s) + '<section class="card"><p class="muted">' + esc(s.sub) + '</p>' + (s.preview.length ? exRows(s.preview, 99) : '') + tools + '</section>' + (s.kind !== 'rest' ? '<div class="cta"><button class="btn block" data-a="startSess" data-id="' + esc(id) + '">Начать</button></div>' : '');
     }
-    el.innerHTML = '<div class="sheet"><div class="bar"><button class="iconbtn" data-a="back" aria-label="Назад">' + IC.back + '</button><div class="grow"><div class="small muted">' + F.DAYS_FULL[d] + (S.s.start ? ', ' + D.fmt(F.dateOf(w, d)) : '') + ', неделя ' + w + '</div><h2>' + esc(s.title) + '</h2></div></div>' + body + '</div>';
-    pushOv(el, 'sess');
+    el.innerHTML = '<div class="sheet" data-sid="' + esc(id) + '"><div class="bar"><button class="iconbtn" data-a="back" aria-label="Назад">' + IC.back + '</button><div class="grow"><div class="small muted">' + esc(sub) + '</div><h2>' + esc(s.title) + '</h2></div></div>' + body + '</div>';
+  }
+
+  /* ---------- Настройка подходов в занятии программы ---------- */
+  function openCfg(id) {
+    var el = document.createElement('div'); el.dataset.cfg = id; pushOv(el, 'cfg'); renderCfg(el, id);
+  }
+  function renderCfg(el, id) {
+    var p = id.split('-'), base = F.baseItems(+p[0], +p[1]) || [], o = S.over[id] || {}, rm = o._rm || [], eff = F.applyOver(id, base), by = {};
+    eff.forEach(function (it) { by[it.ex] = it; });
+    var keep = el.scrollTop;
+    el.innerHTML = '<div class="sheet"><div class="bar"><button class="iconbtn" data-a="back" aria-label="Назад">' + IC.back + '</button><div class="grow"><div class="small muted">Только для этой тренировки</div><h2>Настроить</h2></div></div>' +
+      base.map(function (it) {
+        var off = rm.indexOf(it.ex) >= 0, c = by[it.ex] || it, isT = !!it.sec, val = isT ? c.sec[0] : c.reps[0];
+        return '<section class="card ' + (off ? 'off' : '') + '"><div class="row between"><div class="row nowrap">' + thumb(it.ex) + '<b>' + esc(E[it.ex].n) + '</b></div><button class="btn small ' + (off ? 'ghost' : 'line') + '" data-a="cfgRm" data-id="' + id + '" data-ex="' + it.ex + '">' + (off ? 'Вернуть' : 'Убрать') + '</button></div>' +
+          (off ? '' : '<div class="cfgrow"><span>Подходы</span>' + stepper('cfgSets', id, it.ex, c.sets) + '</div><div class="cfgrow"><span>' + (isT ? 'Секунды' : 'Повторения') + ' <i class="small muted">в программе ' + (isT ? rangeTxt(it.sec) : rangeTxt(it.reps)) + '</i></span>' + stepper('cfgN', id, it.ex, val) + '</div><div class="cfgrow"><span>Отдых, с</span>' + stepper('cfgRest', id, it.ex, c.rest || 0) + '</div>') + '</section>';
+      }).join('') + '<p class="small muted">В разгрузочные недели подходов становится меньше автоматически. Повторы фиксируются на выбранном числе.</p><button class="btn line" data-a="cfgReset" data-id="' + id + '">Сбросить все настройки</button></div>';
+    el.scrollTop = keep;
+  }
+  function stepper(a, id, ex, v) {
+    return '<div class="stp"><button data-a="' + a + '" data-id="' + id + '" data-ex="' + ex + '" data-d="-1" aria-label="Меньше">−</button><output>' + v + '</output><button data-a="' + a + '" data-id="' + id + '" data-ex="' + ex + '" data-d="1" aria-label="Больше">+</button></div>';
+  }
+  function cfgChange(id, ex, kind, dir) {
+    var base = F.baseItems(+id.split('-')[0], +id.split('-')[1]) || [], it = base.filter(function (x) { return x.ex === ex; })[0]; if (!it) return;
+    var o = S.over[id] || (S.over[id] = {}), q = o[ex] || (o[ex] = {}), cur = F.applyOver(id, base).filter(function (x) { return x.ex === ex; })[0] || it;
+    if (kind === 'sets') q.sets = Math.max(1, Math.min(10, cur.sets + dir));
+    if (kind === 'n') { var isT = !!it.sec, v = isT ? cur.sec[0] : cur.reps[0]; q.n = Math.max(1, Math.min(isT ? 1800 : 200, v + dir * (isT ? 5 : 1))); }
+    if (kind === 'rest') q.rest = Math.max(0, Math.min(300, (cur.rest || 0) + dir * 15));
+    save();
+    var el = document.querySelector('[data-cfg="' + id + '"]'); if (el) renderCfg(el, id);
+  }
+
+  /* ---------- Конструктор своей тренировки ---------- */
+  var B = null;
+  var TIMED = ['hollow', 'sideplank', 'plank', 'wallsit', 'longlever', 'boat', 'climber', 'climberslow', 'march', 'joints', 'child', 'walk', 'highknee', 'shadow', 'stepfast', 'lowjack', 'sidestep', 'hipflexor', 'hamstring', 'shoulderwall', 'quadstretch', 'chest', 'glutestretch', 'tricepstretch', 'birddog'];
+  function newItem(ex) {
+    var t = TIMED.indexOf(ex) >= 0, it = { ex: ex, sets: 3, rest: 45, side: F.isUni(ex) };
+    if (t) it.sec = 30; else it.reps = 10;
+    return it;
+  }
+  function openBuilder(cid, preset) {
+    var c = cid ? S.custom.filter(function (x) { return String(x.id) === String(cid); })[0] : null;
+    B = c ? JSON.parse(JSON.stringify(c)) : (preset || { id: null, name: '', warm: true, cool: false, items: [] });
+    var el = document.createElement('div'); el.id = 'bld'; pushOv(el, 'bld'); renderBuilder();
+  }
+  function renderBuilder() {
+    var el = $('#bld'); if (!el || !B) return;
+    var keep = el.scrollTop, mins = B.items.length ? F.customSession(B).min : 0;
+    el.innerHTML = '<div class="sheet"><div class="bar"><button class="iconbtn" data-a="bBack" aria-label="Назад">' + IC.back + '</button><h2 class="grow">' + (B.id ? 'Изменить тренировку' : 'Новая тренировка') + '</h2></div>' +
+      '<label class="f">Название<input type="text" id="bname" maxlength="60" placeholder="Например, Ноги дома" value="' + esc(B.name) + '"></label>' +
+      '<section class="card flat"><label class="switch"><span><b>Разминка 8 минут</b></span><input type="checkbox" data-a="bWarm"' + (B.warm ? ' checked' : '') + '></label><label class="switch"><span><b>Заминка 5 минут</b></span><input type="checkbox" data-a="bCool"' + (B.cool ? ' checked' : '') + '></label></section>' +
+      B.items.map(function (it, i) {
+        var isT = !!it.sec;
+        return '<section class="card"><div class="row between"><div class="row nowrap">' + thumb(it.ex) + '<b>' + esc(E[it.ex].n) + '</b></div><div class="row nowrap"><button class="iconbtn sm" data-a="bUp" data-i="' + i + '" aria-label="Выше"' + (i === 0 ? ' disabled' : '') + '>' + IC.up + '</button><button class="iconbtn sm" data-a="bDown" data-i="' + i + '" aria-label="Ниже"' + (i === B.items.length - 1 ? ' disabled' : '') + '>' + IC.down + '</button><button class="iconbtn sm" data-a="bDel" data-i="' + i + '" aria-label="Убрать">' + IC.close + '</button></div></div>' +
+          '<div class="cfgrow"><span>Подходы</span>' + bstep('bSets', i, it.sets) + '</div>' +
+          '<div class="cfgrow"><span><div class="seg"><button data-a="bMode" data-i="' + i + '" data-v="reps" aria-pressed="' + !isT + '">Повторы</button><button data-a="bMode" data-i="' + i + '" data-v="sec" aria-pressed="' + isT + '">Секунды</button></div></span>' + bstep('bVal', i, isT ? it.sec : it.reps) + '</div>' +
+          '<div class="cfgrow"><span>Отдых, с</span>' + bstep('bRest', i, it.rest) + '</div>' +
+          '<label class="switch"><span>На каждую сторону</span><input type="checkbox" data-a="bSide" data-i="' + i + '"' + (it.side ? ' checked' : '') + '></label></section>';
+      }).join('') +
+      '<button class="btn ghost" data-a="bAdd">' + IC.plus + ' Добавить упражнение</button>' +
+      '<div class="cta"><div class="small muted center">' + (B.items.length ? B.items.length + ' упр., около ' + mins + ' мин' : 'Добавьте хотя бы одно упражнение') + '</div><button class="btn block" data-a="bSave"' + (B.items.length ? '' : ' disabled') + '>Сохранить</button>' + (B.id ? '<button class="btn danger block" data-a="bRemove">Удалить тренировку</button>' : '') + '</div></div>';
+    el.scrollTop = keep;
+    var nm = $('#bname', el); if (nm) nm.addEventListener('input', function () { B.name = nm.value; });
+  }
+  function bstep(a, i, v) { return '<div class="stp"><button data-a="' + a + '" data-i="' + i + '" data-d="-1" aria-label="Меньше">−</button><output>' + v + '</output><button data-a="' + a + '" data-i="' + i + '" data-d="1" aria-label="Больше">+</button></div>'; }
+
+  /* ---------- Выбор упражнений ---------- */
+  var P = null;
+  function openPicker() {
+    P = { sel: [] }; V.lg = 'Все'; V.lq = '';
+    var el = document.createElement('div'); el.id = 'pick'; pushOv(el, 'pick'); renderPicker(true);
+  }
+  function renderPicker(first) {
+    var el = $('#pick'); if (!el) return;
+    if (first) {
+      el.innerHTML = '<div class="sheet"><div class="bar"><button class="iconbtn" data-a="back" aria-label="Назад">' + IC.back + '</button><h2 class="grow">Выбрать упражнения</h2></div>' + libShell('pick') + '<div class="cta"><button class="btn block" data-a="pickDone" id="pickBtn" disabled>Добавить</button></div></div>';
+    } else {
+      var chips = $('.chips', el); if (chips) chips.querySelectorAll('.wk').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.v === V.lg); });
+    }
+    fillLib('pick', P.sel, 'pickTog');
+    var b = $('#pickBtn', el); if (b) { b.disabled = !P.sel.length; b.textContent = P.sel.length ? 'Добавить (' + P.sel.length + ')' : 'Добавить'; }
+  }
+
+  function openZones() {
+    var el = document.createElement('div'), h = F.zones(), names = ['лёгкая ходьба, заминка', 'длинное кардио, можно говорить фразами', 'круговая 40/20', 'интервалы', 'в программе не используется'];
+    el.innerHTML = '<div class="sheet"><div class="bar"><button class="iconbtn" data-a="back" aria-label="Назад">' + IC.back + '</button><h2 class="grow">Зоны пульса</h2></div><section class="card"><p class="small muted">Максимальный пульс ' + h.max + ' (формула Танака: 208 − 0,7 × возраст, разброс около 10 уд/мин), пульс покоя ' + h.rest + ', метод Карвонена. Возраст и пульс покоя меняются в настройках. Ориентируйтесь на самочувствие, а не только на цифры.</p><table class="tbl"><thead><tr><th>Зона</th><th>Пульс</th><th>Для чего</th></tr></thead><tbody>' + h.z.map(function (z, i) { return '<tr><td>' + (i + 1) + '</td><td>' + z[0] + '–' + z[1] + '</td><td>' + esc(names[i]) + '</td></tr>'; }).join('') + '</tbody></table></section></div>';
+    pushOv(el, 'zones');
   }
 
   /* ---------- Тренировка ---------- */
   var R = null, timer = 0;
-  var NO_BPM = { t: 'info' };
 
-  function beginSession(w, d) {
-    var sess = F.session(w, d), steps = sess.build();
+  function startSess(id) {
+    var sess = F.sessById(id); if (!sess) return;
+    if (F.isIntervals(sess)) {
+      var g = F.bpGate();
+      if (g.state === 'high') return dialog({ title: 'Сначала врач', text: 'Среднее давление по вашим записям ' + g.sys + '/' + g.dia + ' (порог для домашних измерений 135/85). Интервалы сегодня не рекомендуются: сначала обратитесь к врачу. Можно заменить занятие быстрой ходьбой в зоне 1–2.', btns: [{ t: 'Заменить прогулкой', fn: function () { beginSession(F.quickSession('walk')); } }, { t: 'Закрыть', cls: 'line' }] });
+      if (g.state === 'few') return dialog({ title: 'Нужна неделя измерений', text: 'Интервалы начинайте после недели домашних измерений давления: 14 записей, утро и вечер. Сейчас записано ' + g.n + '. Если вы уже измеряли давление и согласовали нагрузку с врачом, можно подтвердить и продолжить.', btns: [{ t: 'Открыть давление', fn: function () { A.goBp(); } }, { t: 'Заменить прогулкой', cls: 'ghost', fn: function () { beginSession(F.quickSession('walk')); } }, { t: 'Подтверждаю, начать', cls: 'line', fn: function () { S.bpAck = true; save(); beginSession(sess); } }] });
+    }
+    var hard = ['strength', 'circuit', 'intervals', 'custom'].indexOf(sess.kind) >= 0;
+    if (hard && S.log.some(function (l) { return l.date === D.ymd(D.today()) && ['strength', 'circuit', 'intervals', 'custom'].indexOf(l.kind) >= 0; })) {
+      return dialog({ title: 'Сегодня уже была нагрузка', text: 'Две тяжёлые тренировки в один день снижают восстановление. Лучше сделать лёгкую подвижность или ходьбу, а эту оставить на другой день.', btns: [{ t: 'Подвижность 10 минут', fn: function () { beginSession(F.quickSession('mob')); } }, { t: 'Всё равно начать', cls: 'line', fn: function () { beginSession(sess); } }, { t: 'Отмена', cls: 'ghost' }] });
+    }
+    beginSession(sess);
+  }
+  function beginSession(sess) {
+    var steps = sess.build();
     if (!steps.length) return;
     F.audio.unlock(); F.wake.on();
-    R = { sess: sess, w: w, d: d, steps: steps, i: -1, res: [], t0: Date.now(), paused: false, extra: 0, tm: null, reps: 0, kg: '', lastBeep: null };
+    R = { sess: sess, steps: steps, i: -1, res: [], t0: Date.now(), paused: false, extra: 0, tm: null, reps: 0, kg: '', lastBeep: null, seen: {}, cueIx: {} };
     var el = document.createElement('div'); el.id = 'run'; pushOv(el, 'run');
     go(0);
     timer = setInterval(tick, 100);
   }
-  function startSess(w, d) {
-    var sess = F.session(w, d);
-    if (F.isIntervals(sess)) {
-      var g = F.bpGate();
-      if (g.state === 'high') return dialog({ title: 'Сначала врач', text: 'Среднее давление по вашим записям ' + g.sys + '/' + g.dia + ' (порог для домашних измерений 135/85). Интервалы сегодня не рекомендуются: сначала обратитесь к врачу. Можно заменить занятие быстрой ходьбой в зоне 1–2.', btns: [{ t: 'Заменить прогулкой', fn: function () { beginWalk(); } }, { t: 'Закрыть', cls: 'line' }] });
-      if (g.state === 'few') return dialog({ title: 'Нужна неделя измерений', text: 'Интервалы начинайте после недели домашних измерений давления: 14 записей, утро и вечер. Сейчас записано ' + g.n + '. Если вы уже измеряли давление и согласовали нагрузку с врачом, можно подтвердить и продолжить.', btns: [{ t: 'Открыть замеры', fn: function () { closeAll(); V.tab = 'meas'; V.mtab = 'bp'; render(); } }, { t: 'Заменить прогулкой', cls: 'ghost', fn: beginWalk }, { t: 'Подтверждаю, начать', cls: 'line', fn: function () { S.bpAck = true; save(); beginSession(w, d); } }] });
-    }
-    beginSession(w, d);
-  }
-  function beginWalk() {
-    var sess = { id: 'walk-' + Date.now(), kind: 'walk', title: 'Быстрая ходьба', sub: '', min: 30, preview: [], build: function () { return [{ t: 'time', ex: 'walk', sec: 1800, title: 'Быстрая ходьба 30 минут', sub: 'Зоны 1–2, пульс 116–139. Закончить раньше можно кнопкой «Дальше».', nolog: true, skippable: true, say: 'Быстрая ходьба' }]; } };
-    F.audio.unlock(); F.wake.on();
-    R = { sess: sess, w: 0, d: 0, steps: sess.build(), i: -1, res: [], t0: Date.now(), paused: false, extra: 0, tm: null, reps: 0, kg: '', lastBeep: null, noLog: true };
-    var el = document.createElement('div'); el.id = 'run'; pushOv(el, 'run'); go(0); timer = setInterval(tick, 100);
-  }
 
   function go(i) {
     R.i = i; var st = R.steps[i];
-    R.t0step = now(); R.extra = 0; R.paused = false; R.tm = null; R.lastBeep = null;
+    R.t0step = now(); R.extra = 0; R.paused = false; R.tm = null; R.lastBeep = null; R.said10 = false;
     R.reps = st.target || 0; R.kg = st.load ? (S.loads[st.ex] || '') : '';
-    if (st.t === 'prep') F.audio.say(st.say);
-    else if (st.t === 'rest' && !st.short) F.audio.say(st.say);
-    else if (st.t === 'time') F.audio.say(st.say || st.title);
-    else if (st.t === 'reps' && !st.quick) F.audio.say(st.set > 1 ? 'Подход ' + st.set : (st.say || st.title));
-    else if (st.t === 'info') F.audio.say(st.title);
+    coachStop();
     renderRun();
+    announce(st);
   }
   function next() {
     var st = R.steps[R.i];
@@ -320,36 +524,113 @@
     if (i >= 0) go(i);
   }
 
-  function runMedia(st) { return st.ex && E[st.ex] && E[st.ex].media ? '<div class="stage" data-media="' + E[st.ex].media + '" data-tempo="' + esc(st.tempo || '') + '"></div>' : ''; }
+  /* ---------- Голосовой тренер ---------- */
+  var CO = { tok: 0, tm: [] };
+  function cueRoot() { return stack.length ? stack[stack.length - 1] : document; }
+  function setNow(i, root) { (root || cueRoot()).querySelectorAll('.cues li').forEach(function (li) { li.classList.toggle('now', +li.dataset.i === i); }); }
+  function coachStop() { CO.tok++; CO.tm.forEach(clearTimeout); CO.tm = []; F.audio.cancel(); setNow(-1); }
+  /* lines: [{t: текст, i: номер подсказки на экране, gap: пауза после, silent}] */
+  function coachPlay(lines, opt) {
+    opt = opt || {};
+    var tok = ++CO.tok, root = opt.root || cueRoot();
+    (function step(k, delay) {
+      CO.tm.push(setTimeout(function () {
+        if (tok !== CO.tok) return;
+        if (k >= lines.length || (opt.until && !opt.until())) { setNow(-1, root); if (opt.done) opt.done(); return; }
+        var L = lines[k], fin = false;
+        var adv = function () { if (fin || tok !== CO.tok) return; fin = true; step(k + 1, L.gap != null ? L.gap : (opt.gap || 600)); };
+        setNow(L.i == null ? -1 : L.i, root);
+        F.audio.say(L.t, { queue: true, onend: adv });
+        CO.tm.push(setTimeout(adv, 1800 + L.t.length * 90));
+      }, delay));
+    })(0, opt.delay || 0);
+  }
+  function lastWorkEx() {
+    for (var i = R.i - 1; i >= 0; i--) { var s = R.steps[i]; if ((s.t === 'time' || s.t === 'reps') && s.ex) return s.ex; }
+    return null;
+  }
+  function announce(st) {
+    if (!F.audio.ok()) return;
+    var lvl = S.s.coach || 'full', lines = [], ex = st.ex, cues = ex ? F.cues(ex) : [], prev = R.steps[R.i - 1], opt = {};
+    if (st.t === 'prep') lines.push({ t: st.say || st.title });
+    else if (st.t === 'info') lines.push({ t: st.title });
+    else if (st.t === 'rest') {
+      if (st.short && st.title !== 'Смена стороны') return;
+      lines.push({ t: st.say || 'Отдых' });
+      if (!st.short && st.next && E[st.next] && st.next !== lastWorkEx()) lines.push({ t: 'Дальше: ' + E[st.next].n });
+    } else if (st.t === 'time' || st.t === 'reps') {
+      var first = !R.seen[ex], afterPrep = prev && prev.t === 'prep';
+      if (!afterPrep && (first || st.badge || st.t === 'time') && !(st.t === 'reps' && st.set > 1)) lines.push({ t: st.say || st.title });
+      if (st.t === 'reps' && !st.quick && st.set > 1) lines.push({ t: 'Подход ' + st.set });
+      if (st.side) lines.push({ t: st.side });
+      if (lvl !== 'off' && cues.length) {
+        var n;
+        if (first) {
+          n = lvl === 'full' ? Math.min(cues.length, 5) : Math.min(cues.length, 2);
+          if (st.t === 'time' && st.sec >= 300) n = Math.min(n, 2);
+          for (var k = 0; k < n; k++) lines.push({ t: cues[k], i: k });
+          R.cueIx[ex] = n;
+        } else {
+          var ix = (R.cueIx[ex] || 0) % cues.length; R.cueIx[ex] = (R.cueIx[ex] || 0) + 1;
+          lines.push({ t: cues[ix], i: ix });
+        }
+      }
+      R.seen[ex] = true;
+      if (st.t === 'time') {
+        opt.delay = 800; opt.gap = 2200;
+        if (st.sec < 300) opt.until = function () { var s = R.steps[R.i]; return s === st && !R.paused && (st.sec * 1000 + R.extra - (now() - R.t0step)) > 6000; };
+      }
+    }
+    if (lines.length) coachPlay(lines, opt);
+  }
+  function sayCard(id, btn) {
+    if (btn.dataset.on === '1') { btn.dataset.on = ''; coachStop(); return; }
+    var root = cueRoot(), cues = F.cues(id);
+    btn.dataset.on = '1';
+    coachPlay(cues.map(function (c, i) { return { t: c, i: i }; }), { root: root, gap: 500, done: function () { btn.dataset.on = ''; } });
+  }
+
+  /* ---------- Экран выполнения ---------- */
   var CIRC = 2 * Math.PI * 100;
-  function ring() { return '<div class="ringwrap"><svg viewBox="0 0 220 220" aria-hidden="true"><circle class="ring-bg" cx="110" cy="110" r="100" fill="none" stroke-width="12"/><circle class="ring-fg" id="rg" cx="110" cy="110" r="100" fill="none" stroke-width="12" stroke-linecap="round" stroke-dasharray="' + CIRC.toFixed(1) + '" stroke-dashoffset="0"/></svg><div class="big" id="tm"></div></div>'; }
+  function ring(big) { return '<div class="ringwrap"><svg viewBox="0 0 220 220" aria-hidden="true"><circle class="ring-bg" cx="110" cy="110" r="100" fill="none" stroke-width="12"/><circle class="ring-fg" id="rg" cx="110" cy="110" r="100" fill="none" stroke-width="12" stroke-linecap="round" stroke-dasharray="' + CIRC.toFixed(1) + '" stroke-dashoffset="0"/></svg><div class="big" id="tm"></div></div>'; }
+  function exFor(st) { return st.t === 'rest' ? st.next : st.ex; }
+  function runStage(st) {
+    var id = exFor(st); if (!id || !E[id] || st.t === 'input' || st.t === 'stopwatch') return '';
+    var e = E[id];
+    if (e.media) return '<div class="run-top"><div class="stage" data-media="' + e.media + '" data-tempo="' + esc(st.t === 'rest' ? '' : st.tempo || '') + '"></div></div>';
+    return '<div class="run-top"><div class="stage ph sm">' + IC.bell + '<div class="row center">' + e.m.map(function (m) { return '<span class="chip">' + esc(m) + '</span>'; }).join('') + '</div></div></div>';
+  }
+  function runCues(st) {
+    var id = exFor(st); if (!id || !E[id] || ['info', 'input', 'stopwatch'].indexOf(st.t) >= 0) return '';
+    return '<div class="cuebox"><div class="row between"><span class="small muted">' + (st.t === 'rest' ? 'Дальше: ' + esc(E[id].n) : 'Как делать') + '</span><a class="yt" href="' + ytUrl(id) + '" target="_blank" rel="noopener">YouTube</a></div>' + cuesList(id) + '</div>';
+  }
 
   function renderRun() {
     var el = $('#run'); if (!el) return;
     var st = R.steps[R.i], n = R.steps.length, pct = Math.round(R.i / n * 100), body = '', ctl = '';
     var badge = st.badge ? '<span class="chip badge">' + esc(st.badge) + '</span>' : '';
     var dir = '<button class="btn line" data-a="rPrev">Назад</button>';
+    var setLine = st.side ? '<div class="rsub">' + esc(st.side) + (st.sets > 1 ? ' · подход ' + st.set + ' из ' + st.sets : '') + '</div>' : (st.sets > 1 ? '<div class="rsub">Подход ' + st.set + ' из ' + st.sets + '</div>' : '');
     if (st.t === 'prep') {
-      body = badge + '<div class="rtitle">' + esc(st.title) + '</div><div class="rsub">' + esc(st.sub) + '</div>' + runMedia(st) + '<div class="big" id="tm">5</div><div class="rsub">Приготовьтесь</div>';
-      ctl = '<div class="runctl">' + dir + '<button class="btn ghost" data-a="rPause">Пауза</button><button class="btn" data-a="rSkip">Начать</button></div>';
+      body = '<div class="kick">Приготовьтесь</div><div class="rtitle">' + esc(st.title) + '</div><div class="rsub">' + esc(st.sub) + '</div>' + ring();
+      ctl = '<div class="runctl">' + dir + '<button class="btn ghost" data-a="rPause">Пауза</button><button class="btn" data-a="rSkip">Начать сейчас</button></div>';
     } else if (st.t === 'rest') {
-      body = '<div class="rtitle">' + esc(st.title) + '</div>' + ring() + '<div class="rsub">' + esc(st.sub) + '</div>' + (st.next && E[st.next] ? '<button class="link center" data-a="card" data-ex="' + st.next + '">Как делать: ' + esc(E[st.next].n) + '</button>' : '');
+      body = '<div class="rtitle">' + esc(st.title) + '</div>' + ring() + '<div class="rsub">' + esc(st.sub) + '</div>';
       ctl = '<div class="runctl rest"><button class="btn line" data-a="rPlus">+15 с</button><button class="btn ghost" data-a="rPause">Пауза</button><button class="btn" data-a="rSkip">Пропустить</button></div>';
     } else if (st.t === 'time') {
-      body = badge + '<div class="rtitle">' + esc(st.title) + '</div>' + (st.side ? '<div class="rsub">' + esc(st.side) + (st.sets > 1 ? ' · подход ' + st.set + ' из ' + st.sets : '') + '</div>' : (st.sets > 1 ? '<div class="rsub">Подход ' + st.set + ' из ' + st.sets + '</div>' : '')) + runMedia(st) + ring() + '<div class="rsub">' + esc(st.sub) + '</div>' + (st.range ? '<div class="rsub small">Диапазон ' + rangeTxt(st.range, ' с') + '</div>' : '');
+      body = badge + '<div class="rtitle">' + esc(st.title) + '</div>' + setLine + ring() + (st.sub ? '<div class="rsub">' + esc(st.sub) + '</div>' : '') + (st.range && st.range[0] !== st.range[1] ? '<div class="rsub small">Диапазон ' + rangeTxt(st.range, ' с') + '</div>' : '');
       ctl = '<div class="runctl">' + dir + '<button class="btn ghost" data-a="rPause">Пауза</button><button class="btn" data-a="rSkip">' + (st.skippable ? 'Дальше' : 'Пропустить') + '</button></div>';
     } else if (st.t === 'reps') {
       var e = E[st.ex];
-      body = badge + '<div class="rtitle">' + esc(st.title) + '</div>' + (st.quick ? '<div class="rsub">' + (st.side ? esc(st.side) + ' · ' : '') + 'Выполните ' + st.target + ' повторений</div>' : '<div class="rsub">' + (st.side ? esc(st.side) + ' · ' : '') + 'Подход ' + st.set + ' из ' + st.sets + '</div>') + runMedia(st);
+      body = badge + '<div class="rtitle">' + esc(st.title) + '</div>' + (st.quick ? '<div class="rsub">' + (st.side ? esc(st.side) + ' · ' : '') + 'Выполните ' + st.target + ' повторений</div>' : setLine);
       if (!st.quick) {
-        body += '<div class="card flat center"><div class="small muted">Цель</div><div class="big sm">' + st.target + '</div><div class="small muted">' + (st.range ? 'диапазон ' + rangeTxt(st.range) + ', ' : '') + 'не до отказа</div></div>';
+        body += '<div class="repsrow"><div class="tgt"><div class="small muted">Цель</div><b>' + st.target + '</b><div class="small muted">' + (st.range && st.range[0] !== st.range[1] ? 'диапазон ' + rangeTxt(st.range) : 'не до отказа') + '</div></div><div class="stepper"><button data-a="rMinus" aria-label="Меньше">−</button><output id="rp">' + R.reps + '</output><button data-a="rPlus1" aria-label="Больше">+</button></div></div>';
         if (st.tempo) body += '<div class="phasebox"><div class="small muted">Темп ' + esc(st.tempo) + ' (опускание, пауза, подъём, секунды)</div><div id="tph"><button class="btn small ghost" data-a="tmOn">Включить метроном</button></div><div class="mini"><i id="tpb"></i></div></div>';
         if (st.load) body += '<label class="f">Нагрузка, кг<input type="number" step="0.5" min="0" inputmode="decimal" id="kg" value="' + esc(R.kg) + '" placeholder="' + (e && e.id === 'dbraise' ? '4' : 'вес рюкзака') + '"></label>';
-        body += '<div class="stepper"><button data-a="rMinus" aria-label="Меньше">−</button><output id="rp">' + R.reps + '</output><button data-a="rPlus1" aria-label="Больше">+</button></div><div class="small muted center">Сделано повторений</div>';
       }
       ctl = '<div class="runctl">' + dir + '<button class="btn" data-a="rDone">Готово</button><button class="btn line" data-a="rSkip">Пропустить</button></div>';
     } else if (st.t === 'info') {
-      body = badge + '<div class="rtitle">' + esc(st.title) + '</div><div class="rsub" style="text-align:left;font-size:16px">' + esc(st.sub) + '</div>' + runMedia(st);
+      body = badge + '<div class="rtitle">' + esc(st.title) + '</div><div class="rtext">' + esc(st.sub) + '</div>';
       ctl = '<div class="runctl two">' + dir + '<button class="btn" data-a="rSkip">' + esc(st.btn || 'Дальше') + '</button></div>';
     } else if (st.t === 'input') {
       body = '<div class="rtitle">' + esc(st.title) + '</div><div class="rsub">' + esc(st.sub) + '</div><label class="f">Результат, ' + esc(st.unit) + '<input type="number" inputmode="numeric" id="inp" min="0" style="font-size:32px;text-align:center"></label>';
@@ -358,7 +639,8 @@
       body = '<div class="rtitle">' + esc(st.title) + '</div><div class="rsub">' + esc(st.sub) + '</div><div class="big" id="tm">0:00</div>';
       ctl = '<div class="runctl two"><button class="btn ghost" data-a="rPause">Пауза</button><button class="btn" data-a="rStop">Стоп</button></div>';
     }
-    el.innerHTML = '<div class="run"><div class="bar"><button class="iconbtn" data-a="rExit" aria-label="Выйти из тренировки">' + IC.close + '</button><div class="prog"><i style="width:' + pct + '%"></i></div><span class="small muted">' + (R.i + 1) + '/' + n + '</span>' + (st.ex && E[st.ex] ? '<button class="iconbtn" data-a="card" data-ex="' + st.ex + '" aria-label="Карточка упражнения">' + IC.info + '</button>' : '') + '</div><div class="run-body">' + body + '</div>' + ctl + '</div>';
+    var vb = F.audio.ok() ? IC.vol : IC.mute;
+    el.innerHTML = '<div class="run"><div class="bar"><button class="iconbtn" data-a="rExit" aria-label="Выйти из тренировки">' + IC.close + '</button><div class="prog"><i style="width:' + pct + '%"></i></div><span class="small muted">' + (R.i + 1) + '/' + n + '</span><button class="iconbtn" data-a="rVoice" aria-label="Голос включить или выключить">' + vb + '</button></div>' + runStage(st) + '<div class="run-body">' + body + runCues(st) + '</div>' + ctl + '</div>';
     mountAll(el, st.tempo);
     tick(true);
   }
@@ -374,6 +656,7 @@
       setText('tm', st.t === 'prep' ? String(Math.max(0, sec)) : fmtTime(rem / 1000));
       var rg = $('#rg'); if (rg) rg.setAttribute('stroke-dashoffset', (CIRC * (1 - Math.max(0, Math.min(1, rem / total)))).toFixed(1));
       if (!first && sec <= 3 && sec >= 1 && R.lastBeep !== sec && (st.sec >= 10 || st.t === 'prep')) { R.lastBeep = sec; F.audio.beep(660, 90); }
+      if (!first && st.t === 'time' && st.sec >= 30 && rem <= 10500 && rem > 3000 && !R.said10 && F.audio.ok()) { R.said10 = true; F.audio.say('Осталось десять секунд', { queue: true }); }
       if (!first && rem <= 0) { F.audio.beep(990, 260); next(); }
     } else if (st.t === 'stopwatch') {
       setText('tm', fmtTime(el / 1000 - 0.999));
@@ -391,27 +674,25 @@
   }
 
   function finish() {
-    clearInterval(timer); timer = 0; F.wake.off(); F.audio.say('Тренировка завершена');
+    clearInterval(timer); timer = 0; F.wake.off(); coachStop(); F.audio.say('Тренировка завершена');
     var sec = Math.round((Date.now() - R.t0) / 1000), sets = R.res.length, el = $('#run');
-    var strength = R.sess.kind === 'strength';
+    var strength = R.sess.kind === 'strength' || R.sess.kind === 'custom';
     el.innerHTML = '<div class="run"><div class="run-body"><div class="rtitle">Готово</div><div class="rsub">' + esc(R.sess.title) + '</div><div class="card flat"><div class="kv"><span>Время</span><b>' + fmtTime(sec) + '</b></div>' + (sets ? '<div class="kv"><span>Записано подходов</span><b>' + sets + '</b></div>' : '') + '<div class="kv"><span>Серия дней</span><b>' + (streak() + (doneToday() ? 0 : 1)) + '</b></div></div>' +
       (strength ? '<div class="stack center"><div class="small muted">Запас повторений в последнем рабочем подходе</div><div class="seg" style="align-self:center" role="group" aria-label="Запас повторений">' + [['0', '0'], ['1', '1'], ['2', '2'], ['3', '3+']].map(function (x) { return '<button data-a="rir" data-v="' + x[0] + '" aria-pressed="false">' + x[1] + '</button>'; }).join('') + '</div><div class="small muted">Если запас 2 и больше во всех подходах на верхней границе диапазона, в следующем блоке усложняйте.</div></div>' : '') +
       '</div><button class="btn" data-a="rSave">Сохранить</button></div>';
   }
   function doneToday() { return S.log.some(function (l) { return l.date === D.ymd(D.today()); }); }
   function saveRun() {
-    if (!R.noLog) {
-      var by = {};
-      R.res.forEach(function (r) { if (!r.reps) return; var b = by[r.ex] || (by[r.ex] = { reps: [], kg: 0 }); b.reps.push(r.reps); if (r.kg) b.kg = Math.max(b.kg, r.kg); });
-      Object.keys(by).forEach(function (k) { S.last[k] = { reps: by[k].reps, kg: by[k].kg || null, date: D.ymd(D.today()) }; });
-      S.log.push({ id: R.sess.id, date: D.ymd(D.today()), week: R.w, day: R.d, title: R.sess.title, kind: R.sess.kind, sec: Math.round((Date.now() - R.t0) / 1000), res: R.res, rir: R.rir == null ? null : R.rir });
-    }
+    var by = {};
+    R.res.forEach(function (r) { if (!r.reps) return; var b = by[r.ex] || (by[r.ex] = { reps: [], kg: 0 }); b.reps.push(r.reps); if (r.kg) b.kg = Math.max(b.kg, r.kg); });
+    Object.keys(by).forEach(function (k) { S.last[k] = { reps: by[k].reps, kg: by[k].kg || null, date: D.ymd(D.today()) }; });
+    S.log.push({ id: R.sess.id, cy: S.cycle || 1, date: D.ymd(D.today()), title: R.sess.title, kind: R.sess.kind, sec: Math.round((Date.now() - R.t0) / 1000), res: R.res, rir: R.rir == null ? null : R.rir });
     save(); endRun();
   }
-  function endRun() { clearInterval(timer); timer = 0; F.wake.off(); R = null; closeAll(); render(); }
+  function endRun() { clearInterval(timer); timer = 0; F.wake.off(); coachStop(); R = null; closeAll(); render(); }
   function runExit() {
     if (!R) return;
-    R.paused = true; R.pauseAt = now();
+    R.paused = true; R.pauseAt = now(); coachStop();
     var btns = [{ t: 'Продолжить', fn: function () { R.t0step += now() - R.pauseAt; R.paused = false; } }];
     if (R.res.length) btns.push({ t: 'Завершить и сохранить', cls: 'ghost', fn: function () { R.paused = false; finish(); } });
     btns.push({ t: 'Выйти без сохранения', cls: 'danger', fn: function () { endRun(); } });
@@ -419,21 +700,40 @@
   }
 
   /* ---------- Действия ---------- */
+  function setPos(w) { S.pos = { week: Math.max(0, Math.min(12, w)), since: D.ymd(D.today()) }; V.week = null; save(); }
+  function refreshTopSess() {
+    var t = stack[stack.length - 1];
+    if (t && t.dataset.kind === 'sess') { var sh = t.firstElementChild; if (sh && sh.dataset.sid) fillSess(t, sh.dataset.sid); }
+  }
   var A = {
-    tab: function (el) { closeAll(); V.tab = el.dataset.v; if (V.tab === 'plan') V.week = null; render(); window.scrollTo(0, 0); },
+    tab: function (el) { closeAll(); coachStop(); V.tab = el.dataset.v; if (V.tab === 'prog') V.week = null; render(); window.scrollTo(0, 0); },
     selWeek: function (el) { V.week = +el.dataset.v; render(); },
-    mtab: function (el) { V.mtab = el.dataset.v; render(); },
-    back: function () { closeTop(true); },
+    stab: function (el) { V.stab = el.dataset.v; render(); },
+    back: function () { if (!R) coachStop(); closeTop(true); refreshTopSess(); },
     card: function (el) { var st = R && R.steps[R.i]; openCard(el.dataset.ex, st && st.ex === el.dataset.ex ? { tempo: st.tempo } : null); },
-    openSess: function (el) { openSess(+el.dataset.w, +el.dataset.d); },
-    startSess: function (el) { startSess(+el.dataset.w, +el.dataset.d); },
-    setStart: function () { var v = $('#startDate').value; if (!v) return; S.s.start = D.ymd(D.monday(D.parse(v))); save(); render(); },
-    chgStart: function () { },
-    newCycle: function () { dialog({ title: 'Новый цикл', text: 'Выберите новый понедельник недели 0 в настройках. История тренировок и замеров сохранится.', btns: [{ t: 'Открыть настройки', fn: function () { V.tab = 'more'; render(); } }, { t: 'Отмена', cls: 'line' }] }); },
-    goMeas: function () { closeAll(); V.tab = 'meas'; V.mtab = 'body'; render(); },
+    openSess: function (el) { openSess(el.dataset.id); },
+    startSess: function (el) { startSess(el.dataset.id); },
+    startForma: function () { S.mode = 'forma'; setPos(0); render(); },
+    startOwn: function () { S.mode = 'own'; save(); render(); },
+    nextWeek: function () {
+      var w = S.pos ? S.pos.week : 0, p = F.weekProgress(w);
+      var go = function () { setPos(w + 1); toast('Неделя ' + (w + 1)); render(); };
+      if (p.done < p.total) dialog({ title: 'Перейти к неделе ' + (w + 1) + '?', text: 'Выполнено ' + p.done + ' из ' + p.total + '. Невыполненные тренировки останутся в разделе «Программа», их можно сделать позже.', btns: [{ t: 'Перейти', fn: go }, { t: 'Остаться', cls: 'line' }] });
+      else go();
+    },
+    setWeek: function (el) { setPos(+el.dataset.v); toast('Текущая неделя ' + el.dataset.v); render(); },
+    pickOther: function () { V.tab = 'prog'; V.week = S.pos ? S.pos.week : 0; render(); window.scrollTo(0, 0); },
+    newCycle: function () {
+      dialog({ title: 'Начать программу заново?', text: 'Отметки выполнения готовой программы обнулятся и вы вернётесь к неделе 0. История, замеры, тесты и ваши тренировки сохранятся.', btns: [{ t: 'Начать заново', fn: function () { S.cycle = (S.cycle || 1) + 1; S.mode = 'forma'; setPos(0); render(); } }, { t: 'Отмена', cls: 'line' }] });
+    },
+    goMeas: function () { closeAll(); V.tab = 'stat'; V.stab = 'body'; render(); },
+    goBp: function () { closeAll(); V.tab = 'stat'; V.stab = 'bp'; render(); },
     chk: function (el) { S.checks[el.dataset.k] = el.checked; save(); },
-    tog: function (el) { S.s[el.dataset.k] = el.checked; save(); },
+    tog: function (el) { S.s[el.dataset.k] = el.checked; save(); if (el.dataset.k === 'voice' && !el.checked) coachStop(); },
     theme: function (el) { S.s.theme = el.dataset.v; save(); applyTheme(); render(); },
+    coach: function (el) { S.s.coach = el.dataset.v; save(); render(); },
+    mode: function (el) { S.mode = el.dataset.v; if (S.mode === 'forma' && !S.pos) setPos(0); save(); render(); },
+    testVoice: function () { if (!window.speechSynthesis) return toast('В этом браузере нет синтеза речи'); if (!S.s.voice) return toast('Сначала включите голос'); F.audio.unlock(); F.audio.say('Голос работает. Приседайте медленно, спина прямая, пятки на полу.'); },
     saveMeas: function () {
       var g = function (id) { var v = parseFloat($('#' + id).value.replace(',', '.')); return isNaN(v) ? null : v; };
       var o = { d: D.ymd(D.today()), w: g('m_w'), waist: g('m_waist'), hr: g('m_hr') };
@@ -447,27 +747,78 @@
       S.bp.push({ d: D.ymd(D.today()), sys: s, dia: d, when: $('#b_t').value }); save(); render();
     },
     delBp: function (el) { S.bp.splice(+el.dataset.v, 1); save(); render(); },
-    lib: function () {
-      var el = document.createElement('div'), ids = Object.keys(E).sort(function (a, b) { return E[a].n.localeCompare(E[b].n, 'ru'); });
-      el.innerHTML = '<div class="sheet"><div class="bar"><button class="iconbtn" data-a="back" aria-label="Назад">' + IC.back + '</button><h2 class="grow">Упражнения</h2></div><input type="text" id="q" placeholder="Поиск" aria-label="Поиск упражнения"><section class="card"><div class="list" id="ql">' + ids.map(function (id) { return '<button class="item" data-a="card" data-ex="' + id + '" data-n="' + esc(E[id].n.toLowerCase()) + '"><div class="grow"><div class="t">' + esc(E[id].n) + '</div><div class="s">' + esc(E[id].m.join(', ')) + '</div></div><span class="muted">›</span></button>'; }).join('') + '</div></section></div>';
-      pushOv(el, 'lib');
-      $('#q', el).addEventListener('input', function (e) { var v = e.target.value.toLowerCase(); el.querySelectorAll('#ql .item').forEach(function (b) { b.style.display = b.dataset.n.indexOf(v) >= 0 ? '' : 'none'; }); });
-    },
-    zones: function () {
-      var el = document.createElement('div');
-      el.innerHTML = '<div class="sheet"><div class="bar"><button class="iconbtn" data-a="back" aria-label="Назад">' + IC.back + '</button><h2 class="grow">Зоны пульса</h2></div><section class="card"><p class="small muted">Максимальный пульс 173 (формула Танака 208 − 0,7 × возраст, разброс около 10 уд/мин), пульс покоя 60, метод Карвонена. Ориентируйтесь на самочувствие, а не только на цифры.</p><table class="tbl"><thead><tr><th>Зона</th><th>Пульс</th><th>Для чего</th></tr></thead><tbody>' + F.ZONES.map(function (z) { return '<tr><td>' + z[0] + '</td><td>' + z[1] + '</td><td>' + esc(z[2]) + '</td></tr>'; }).join('') + '</tbody></table></section></div>';
-      pushOv(el, 'zones');
-    },
+    zones: function () { openZones(); },
     exp: function () { $('#bk').value = store.export(); $('#bkmsg').textContent = 'Данные показаны. Скопируйте текст.'; },
     copy: function () { var t = store.export(); $('#bk').value = t; try { navigator.clipboard.writeText(t).then(function () { $('#bkmsg').textContent = 'Скопировано.'; }, function () { $('#bk').select(); $('#bkmsg').textContent = 'Выделено, скопируйте вручную.'; }); } catch (e) { $('#bk').select(); } },
-    imp: function () { try { var o = JSON.parse($('#bk').value); if (!o || o.v !== 1) throw 0; store.replace(o); S = store.get(); $('#bkmsg').textContent = 'Данные загружены.'; applyTheme(); } catch (e) { $('#bkmsg').textContent = 'Не удалось прочитать текст.'; } },
+    imp: function () { try { var o = JSON.parse($('#bk').value); if (!o || !(o.v >= 1)) throw 0; store.replace(o); S = store.get(); $('#bkmsg').textContent = 'Данные загружены.'; applyTheme(); } catch (e) { $('#bkmsg').textContent = 'Не удалось прочитать текст.'; } },
+    /* библиотека */
+    lgrp: function (el) { V.lg = el.dataset.v; if (el.dataset.ns === 'pick') renderPicker(); else render(); },
+    sayCard: function (el) { F.audio.unlock(); sayCard(el.dataset.ex, el); },
+    /* настройка занятия программы */
+    cfg: function (el) { openCfg(el.dataset.id); },
+    cfgSets: function (el) { cfgChange(el.dataset.id, el.dataset.ex, 'sets', +el.dataset.d); },
+    cfgN: function (el) { cfgChange(el.dataset.id, el.dataset.ex, 'n', +el.dataset.d); },
+    cfgRest: function (el) { cfgChange(el.dataset.id, el.dataset.ex, 'rest', +el.dataset.d); },
+    cfgRm: function (el) {
+      var id = el.dataset.id, o = S.over[id] || (S.over[id] = {}), rm = o._rm || (o._rm = []), i = rm.indexOf(el.dataset.ex);
+      if (i >= 0) rm.splice(i, 1); else rm.push(el.dataset.ex);
+      save(); var t = document.querySelector('[data-cfg="' + id + '"]'); if (t) renderCfg(t, id);
+    },
+    cfgReset: function (el) {
+      var id = el.dataset.id; delete S.over[id]; save();
+      var t = document.querySelector('[data-cfg="' + id + '"]'); if (t) renderCfg(t, id); else refreshTopSess();
+    },
+    saveAsOwn: function (el) {
+      var id = el.dataset.id, p = id.split('-'), w = +p[0], d = +p[1], wi = F.weekInfo(w), sess = F.session(w, d);
+      var items = F.applyOver(id, F.baseItems(w, d) || []).map(function (it) {
+        var o = { ex: it.ex, sets: it.sets, rest: it.rest || 45, side: !!it.side };
+        if (it.sec) o.sec = F.pick(it.sec, Math.max(1, wi.wib)); else o.reps = F.pick(it.reps, Math.max(1, wi.wib));
+        return o;
+      });
+      openBuilder(null, { id: null, name: sess.title.replace(/^Тренировка\s+/, '') + ' (моя)', warm: true, cool: true, items: items });
+    },
+    /* свои тренировки */
+    newCustom: function () { openBuilder(null); },
+    editCustom: function (el) { openBuilder(el.dataset.id); },
+    dupCustom: function (el) {
+      var c = S.custom.filter(function (x) { return String(x.id) === el.dataset.id; })[0]; if (!c) return;
+      var n = JSON.parse(JSON.stringify(c)); n.id = S.nid++; n.name = (c.name || 'Тренировка') + ' (копия)'; S.custom.push(n); save(); closeAll(); toast('Копия создана'); render();
+    },
+    bBack: function () {
+      if (B && !B.id && B.items.length) return dialog({ title: 'Закрыть без сохранения?', text: 'Введённая тренировка не будет сохранена.', btns: [{ t: 'Закрыть', cls: 'danger', fn: function () { B = null; closeTop(true); refreshTopSess(); } }, { t: 'Продолжить', cls: 'line' }] });
+      B = null; closeTop(true); refreshTopSess();
+    },
+    bWarm: function (el) { B.warm = el.checked; },
+    bCool: function (el) { B.cool = el.checked; },
+    bUp: function (el) { var i = +el.dataset.i; if (i > 0) { var t = B.items[i - 1]; B.items[i - 1] = B.items[i]; B.items[i] = t; renderBuilder(); } },
+    bDown: function (el) { var i = +el.dataset.i; if (i < B.items.length - 1) { var t = B.items[i + 1]; B.items[i + 1] = B.items[i]; B.items[i] = t; renderBuilder(); } },
+    bDel: function (el) { B.items.splice(+el.dataset.i, 1); renderBuilder(); },
+    bSets: function (el) { var it = B.items[+el.dataset.i]; it.sets = Math.max(1, Math.min(10, it.sets + +el.dataset.d)); renderBuilder(); },
+    bVal: function (el) { var it = B.items[+el.dataset.i], dd = +el.dataset.d; if (it.sec) it.sec = Math.max(5, Math.min(3600, it.sec + dd * 5)); else it.reps = Math.max(1, Math.min(200, it.reps + dd)); renderBuilder(); },
+    bRest: function (el) { var it = B.items[+el.dataset.i]; it.rest = Math.max(0, Math.min(300, it.rest + +el.dataset.d * 15)); renderBuilder(); },
+    bMode: function (el) { var it = B.items[+el.dataset.i]; if (el.dataset.v === 'sec' && !it.sec) { delete it.reps; it.sec = 30; } if (el.dataset.v === 'reps' && !it.reps) { delete it.sec; it.reps = 10; } renderBuilder(); },
+    bSide: function (el) { B.items[+el.dataset.i].side = el.checked; },
+    bAdd: function () { openPicker(); },
+    pickTog: function (el) { var i = P.sel.indexOf(el.dataset.ex); if (i >= 0) P.sel.splice(i, 1); else P.sel.push(el.dataset.ex); renderPicker(); },
+    pickDone: function () { var add = P.sel.map(newItem); P = null; B.items = B.items.concat(add); closeTop(true); renderBuilder(); },
+    bSave: function () {
+      if (!B.items.length) return;
+      B.name = (B.name || '').trim() || 'Моя тренировка ' + (S.custom.length + 1);
+      if (B.id) { var k = S.custom.findIndex(function (x) { return x.id === B.id; }); if (k >= 0) S.custom[k] = B; else S.custom.push(B); }
+      else { B.id = S.nid++; S.custom.push(B); }
+      save(); B = null; closeAll(); toast('Тренировка сохранена'); render();
+    },
+    bRemove: function () {
+      dialog({ title: 'Удалить тренировку?', text: 'Тренировка «' + B.name + '» будет удалена. История выполненных тренировок останется.', btns: [{ t: 'Удалить', cls: 'danger', fn: function () { S.custom = S.custom.filter(function (x) { return x.id !== B.id; }); save(); B = null; closeAll(); render(); } }, { t: 'Отмена', cls: 'line' }] });
+    },
     /* тренировка */
     rExit: function () { runExit(); },
     rPrev: function () { prevStep(); },
-    rSkip: function () { var st = R.steps[R.i]; if (st.t === 'time' && st.skippable) { next(); return; } next(); },
+    rSkip: function () { next(); },
+    rVoice: function (el) { S.s.voice = !S.s.voice; save(); if (!S.s.voice) coachStop(); el.innerHTML = F.audio.ok() ? IC.vol : IC.mute; if (S.s.voice && R) { F.audio.unlock(); announce(R.steps[R.i]); } },
     rPause: function (el) {
       if (R.paused) { R.t0step += now() - R.pauseAt; R.paused = false; el.textContent = 'Пауза'; }
-      else { R.paused = true; R.pauseAt = now(); el.textContent = 'Продолжить'; }
+      else { R.paused = true; R.pauseAt = now(); el.textContent = 'Продолжить'; coachStop(); }
     },
     rPlus: function () { R.extra += 15000; },
     rMinus: function () { R.reps = Math.max(0, R.reps - 1); setText('rp', String(R.reps)); },
@@ -481,7 +832,7 @@
       }
       next();
     },
-    tmOn: function () { var st = R.steps[R.i]; if (!parseTempo(st.tempo)) return; F.audio.unlock(); R.tm = { t0: now(), k: 0, ph: -1 }; R.reps = 0; setText('rp', '0'); tickTempo(); },
+    tmOn: function () { var st = R.steps[R.i]; if (!parseTempo(st.tempo)) return; F.audio.unlock(); coachStop(); R.tm = { t0: now(), k: 0, ph: -1 }; R.reps = 0; setText('rp', '0'); tickTempo(); },
     tmOff: function () { R.tm = null; var b = $('#tph'); if (b) b.innerHTML = '<button class="btn small ghost" data-a="tmOn">Включить метроном</button>'; },
     rInput: function () {
       var st = R.steps[R.i], v = parseFloat($('#inp').value);
@@ -505,22 +856,27 @@
   document.addEventListener('change', function (e) {
     var el = e.target;
     if (el.matches && el.matches('input[type=checkbox][data-a]')) { var f = A[el.dataset.a]; if (f) f(el, e); return; }
-    if (el.id === 'startDate2') { if (el.value) { S.s.start = D.ymd(D.monday(D.parse(el.value))); save(); el.value = S.s.start; } return; }
+    if (el.dataset && el.dataset.set) { var v = parseFloat(el.value); if (!isNaN(v)) { S.s[el.dataset.set] = v; save(); render(); } return; }
+    if (el.matches && el.matches('select[data-pos]')) { setPos(+el.value); toast('Текущая неделя ' + el.value); return; }
     if (el.dataset && el.dataset.t) {
       var w = el.dataset.w, k = el.dataset.t; S.tests[w] = S.tests[w] || {};
       if (el.value === '') delete S.tests[w][k]; else S.tests[w][k] = parseFloat(el.value);
       save();
     }
   });
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (el.id && el.id.indexOf('lq_') === 0) { V.lq = el.value; var ns = el.id.slice(3); fillLib(ns, ns === 'pick' ? P.sel : null, ns === 'pick' ? 'pickTog' : 'card'); }
+  });
   $('.tabbar').addEventListener('click', function (e) { var b = e.target.closest('button[data-v]'); if (b) A.tab(b); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden && R && S.s.wake) F.wake.on(); });
 
   /* вкладки */
-  $('.tabbar nav').innerHTML = [['today', 'Сегодня'], ['plan', 'План'], ['meas', 'Замеры'], ['more', 'Ещё']].map(function (t) { return '<button data-v="' + t[0] + '">' + IC[t[0]] + '<span>' + t[1] + '</span></button>'; }).join('');
+  $('.tabbar nav').innerHTML = [['today', 'Сегодня'], ['prog', 'Программа'], ['lib', 'Упражнения'], ['stat', 'Прогресс'], ['set', 'Настройки']].map(function (t) { return '<button data-v="' + t[0] + '">' + IC[t[0]] + '<span>' + t[1] + '</span></button>'; }).join('');
 
   render();
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { /* офлайн-режим недоступен */ }); });
   }
-  window.FORMA.debug = { A: A, get R() { return R; }, go: go, V: V };
+  window.FORMA.debug = { A: A, get R() { return R; }, go: go, V: V, get S() { return S; }, announce: announce, stack: stack };
 })();
