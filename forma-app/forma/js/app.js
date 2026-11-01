@@ -154,7 +154,7 @@
   }
   function sessCard(sess, o) {
     o = o || {};
-    var done = doneEntry(sess.id), html = '<section class="card ' + (o.hero ? 'hero' : '') + '"><div class="row between"><span class="chip">' + esc(KIND[sess.kind] || '') + '</span>' + (done ? '<span class="chip ok">Выполнено</span>' : (sess.min ? '<span class="chip plain">≈ ' + sess.min + ' мин</span>' : '')) + '</div>' +
+    var done = doneEntry(sess.id), html = '<section class="card ' + (o.hero ? 'hero' : '') + '"><div class="row between"><span class="chip">' + esc(KIND[sess.kind] || '') + '</span>' + (done ? '<span class="chip ok">Выполнено</span>' : ((sess.opt ? '<span class="chip plain">по желанию</span>' : '') + (sess.min ? '<span class="chip plain">≈ ' + sess.min + ' мин</span>' : ''))) + '</div>' +
       '<div class="stack"><h2>' + esc(sess.title) + '</h2><p class="muted">' + esc(sess.sub) + '</p></div>';
     if (sess.preview.length) {
       html += exRows(sess.preview, o.all ? 99 : 4);
@@ -166,7 +166,7 @@
   }
   function sessRow(sess, hint) {
     var dn = doneEntry(sess.id);
-    return '<div class="srow"><button class="dot' + (dn ? ' done' : '') + '" data-a="openSess" data-id="' + esc(sess.id) + '" aria-label="Открыть">' + (dn ? '✓' : (hint || '·')) + '</button><button class="grow tt" data-a="openSess" data-id="' + esc(sess.id) + '"><div class="t">' + esc(sess.title) + '</div><div class="s">' + (sess.min ? '≈ ' + sess.min + ' мин' : 'без нагрузки') + (dn ? ' · ' + esc(D.fmt(D.parse(dn.date))) : '') + '</div></button>' +
+    return '<div class="srow"><button class="dot' + (dn ? ' done' : '') + '" data-a="openSess" data-id="' + esc(sess.id) + '" aria-label="Открыть">' + (dn ? '✓' : (hint || '·')) + '</button><button class="grow tt" data-a="openSess" data-id="' + esc(sess.id) + '"><div class="t">' + esc(sess.title) + '</div><div class="s">' + (sess.opt ? 'по желанию · ' : '') + (sess.min ? '≈ ' + sess.min + ' мин' : 'без нагрузки') + (dn ? ' · ' + esc(D.fmt(D.parse(dn.date))) : '') + '</div></button>' +
       (sess.kind === 'prep' ? '' : '<button class="btn small ' + (dn ? 'line' : 'ghost') + '" data-a="startSess" data-id="' + esc(sess.id) + '">' + (dn ? 'Ещё раз' : 'Старт') + '</button>') + '</div>';
   }
 
@@ -335,6 +335,7 @@
     out += '<section class="card"><h2>Программа</h2>' + segm('mode', [['forma', 'Готовая 12 недель'], ['own', 'Своя']], S.mode) + (S.mode === 'forma' ? '<label class="f">Текущая неделя<select data-pos>' + [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (w) { return '<option value="' + w + '"' + ((S.pos ? S.pos.week : 0) === w ? ' selected' : '') + '>' + (w === 0 ? 'Неделя 0: подготовка' : 'Неделя ' + w) + '</option>'; }).join('') + '</select></label><div class="small muted">Неделя меняется кнопкой на экране «Сегодня» или здесь. Даты не нужны.</div>' + sw('bands', 'Есть резина с дверным креплением', 'Если нет, тяга резиной заменяется на Y-T-W лёжа') + '<button class="btn line" data-a="newCycle">Начать программу заново</button>' : '<p class="small muted">Готовая программа не используется. Тренировки берутся из раздела «Программа → Мои тренировки».</p>') + '</section>';
     out += '<section class="card"><h2>Голосовой тренер</h2>' + sw('voice', 'Голос', 'Нужен русский голос синтеза речи в Android') +
       '<div class="stack"><b>Подсказки по технике</b>' + segm('coach', [['off', 'Выкл'], ['short', 'Кратко'], ['full', 'Подробно']], S.s.coach) + '<div class="small muted">Во время упражнения голос говорит, как делать его правильно, а выделенная строка на экране показывает, что звучит сейчас.</div></div>' +
+      '<label class="switch"><span><b>Напоминать про дыхание</b><div class="small muted">Голос подсказывает вдох и выдох: в метрономе по фазам, в планках и растяжках по очереди</div></span><input type="checkbox" data-a="tog" data-k="breath"' + (S.s.breath !== false ? ' checked' : '') + '></label>' +
       '<button class="btn ghost" data-a="testVoice">Проверить голос</button>' + sw('beep', 'Звуковые сигналы', 'Отсчёт трёх последних секунд') + sw('wake', 'Не гасить экран') + '</section>';
     var hr = F.zones();
     out += '<section class="card"><h2>Ваши данные</h2><div class="grid3"><label class="f">Возраст<input type="number" inputmode="numeric" data-set="age" min="14" max="90" value="' + (S.s.age || 50) + '"></label><label class="f">Пульс покоя<input type="number" inputmode="numeric" data-set="hrRest" min="35" max="110" value="' + (S.s.hrRest || 60) + '"></label><label class="f">Цель, мин/день<input type="number" inputmode="numeric" data-set="goalMin" min="5" max="240" value="' + (S.s.goalMin || 30) + '"></label></div><p class="small muted">Максимальный пульс ' + hr.max + ' (формула Танака). Зоны считаются по методу Карвонена и подставляются в тренировки.</p><button class="btn ghost" data-a="zones">Зоны пульса</button></section>';
@@ -358,12 +359,29 @@
   function cuesList(id, cls) {
     return '<ol class="cues ' + (cls || '') + '">' + F.cues(id).map(function (c, i) { return '<li data-i="' + i + '">' + esc(c) + '</li>'; }).join('') + '</ol>';
   }
+  /* Подробное описание: F.DET[id] */
+  function detCard(id) {
+    var d = (F.DET || {})[id]; if (!d) return '';
+    var li = function (a) { return '<ul>' + a.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'; };
+    var h = '<section class="card det"><h3>Подробно</h3>';
+    if (d.aka) h += '<p class="aka">' + esc(d.aka) + '</p>';
+    h += '<h4>Исходное положение</h4><p>' + esc(d.start) + '</p>';
+    if (d.hold) h += '<h4>Как держать рюкзак или опору</h4><p>' + esc(d.hold) + '</p>';
+    h += '<h4>Как выполнять</h4><ol>' + d.steps.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>';
+    if (d.breath) h += '<h4>Дыхание</h4><p>' + esc(d.breath) + '</p>';
+    if (d.mist && d.mist.length) h += '<h4>Частые ошибки</h4>' + li(d.mist);
+    if (d.easy && d.easy !== '—') h += '<h4>Легче</h4><p>' + esc(d.easy) + '</p>';
+    if (d.hard && d.hard !== '—') h += '<h4>Сложнее</h4><p>' + esc(d.hard) + '</p>';
+    if (d.stop) h += '<div class="notice">' + esc(d.stop) + '</div>';
+    return h + '</section>';
+  }
+
   function openCard(id, ctx) {
     var e = E[id]; if (!e) return;
     var last = S.last[id], el = document.createElement('div');
     el.innerHTML = '<div class="sheet"><div class="bar"><button class="iconbtn" data-a="back" aria-label="Назад">' + IC.back + '</button><h2 class="grow">' + esc(e.n) + '</h2></div>' +
       mediaBox(id, true) +
-      '<section class="card"><div class="row between"><h3>Как делать</h3>' + (F.audio.ok() ? '<button class="btn small ghost" data-a="sayCard" data-ex="' + id + '">' + IC.vol + ' Озвучить</button>' : '') + '</div>' + cuesList(id) + (ctx && ctx.tempo ? '<div class="notice info">Темп ' + esc(ctx.tempo) + ': первая цифра секунды опускания (самая тяжёлая часть), вторая пауза, третья подъём.</div>' : '') + '<p class="small muted">Дышите ровно, выдох на усилии, дыхание не задерживайте. При боли в суставе остановитесь и замените упражнение.</p></section>' +
+      '<section class="card"><div class="row between"><h3>Как делать</h3>' + (F.audio.ok() ? '<button class="btn small ghost" data-a="sayCard" data-ex="' + id + '">' + IC.vol + ' Озвучить</button>' : '') + '</div>' + cuesList(id) + (ctx && ctx.tempo ? '<div class="notice info">Темп ' + esc(ctx.tempo) + ': первая цифра секунды опускания (самая тяжёлая часть), вторая пауза, третья подъём.</div>' : '') + '<p class="small muted">Дышите ровно, выдох на усилии, дыхание не задерживайте. При боли в суставе остановитесь и замените упражнение.</p></section>' + detCard(id) +
       '<section class="card"><h3>Область внимания</h3><div class="row">' + e.m.map(function (m) { return '<span class="chip">' + esc(m) + '</span>'; }).join('') + e.s.map(function (m) { return '<span class="chip plain">' + esc(m) + '</span>'; }).join('') + '</div></section>' +
       (last ? '<section class="card flat"><h3>Прошлый раз</h3><p>' + esc(D.fmtFull(last.date)) + ': ' + last.reps.join(' · ') + ' повторений' + (last.kg ? ', ' + last.kg + ' кг' : '') + '</p></section>' : '') +
       '<a class="btn ghost block ytlink" href="' + ytUrl(id) + '" target="_blank" rel="noopener">Смотреть на YouTube</a></div>';
@@ -549,6 +567,21 @@
     for (var i = R.i - 1; i >= 0; i--) { var s = R.steps[i]; if ((s.t === 'time' || s.t === 'reps') && s.ex) return s.ex; }
     return null;
   }
+  /* Ведение дыхания в удержаниях: «вдох», «выдох» по очереди; в долгих планках редкое напоминание */
+  function paceBreath(st, tok) {
+    var inh = true, long = st.sec > 90, gap = long ? 30000 : 3200;
+    (function loop(delay) {
+      CO.tm.push(setTimeout(function () {
+        if (tok !== CO.tok) return;
+        var s = R && R.steps[R.i]; if (s !== st) return;
+        if (R.paused) { loop(1000); return; }
+        var left = st.sec * 1000 + R.extra - (now() - R.t0step);
+        if (left < 4000) return;
+        F.audio.say(long ? 'Дышите ровно, без задержки' : (inh ? 'Вдох' : 'Выдох'), { queue: true });
+        inh = !inh; loop(gap);
+      }, delay));
+    })(long ? 15000 : 1500);
+  }
   function announce(st) {
     if (!F.audio.ok()) return;
     var lvl = S.s.coach || 'full', lines = [], ex = st.ex, cues = ex ? F.cues(ex) : [], prev = R.steps[R.i - 1], opt = {};
@@ -563,22 +596,26 @@
       if (!afterPrep && (first || st.badge || st.t === 'time') && !(st.t === 'reps' && st.set > 1)) lines.push({ t: st.say || st.title });
       if (st.t === 'reps' && !st.quick && st.set > 1) lines.push({ t: 'Подход ' + st.set });
       if (st.side) lines.push({ t: st.side });
-      if (lvl !== 'off' && cues.length) {
+      var brOn = S.s.breath !== false, main = cues.slice(0, -1), bci = cues.length - 1;
+      if (lvl !== 'off' && main.length) {
         var n;
         if (first) {
-          n = lvl === 'full' ? Math.min(cues.length, 5) : Math.min(cues.length, 2);
-          if (st.t === 'time' && st.sec >= 300) n = Math.min(n, 2);
-          for (var k = 0; k < n; k++) lines.push({ t: cues[k], i: k });
+          n = lvl === 'full' ? Math.min(main.length, 4) : Math.min(main.length, 1);
+          if (st.t === 'time' && st.sec >= 300) n = Math.min(n, 1);
+          for (var k = 0; k < n; k++) lines.push({ t: main[k], i: k });
           R.cueIx[ex] = n;
         } else {
-          var ix = (R.cueIx[ex] || 0) % cues.length; R.cueIx[ex] = (R.cueIx[ex] || 0) + 1;
-          lines.push({ t: cues[ix], i: ix });
+          var ix = (R.cueIx[ex] || 0) % main.length; R.cueIx[ex] = (R.cueIx[ex] || 0) + 1;
+          lines.push({ t: main[ix], i: ix });
         }
       }
+      /* напоминание про дыхание звучит в каждом подходе, даже при коротких подсказках */
+      if ((brOn || lvl !== 'off') && cues.length && !(lvl === 'off' && !brOn)) lines.push({ t: cues[bci], i: bci });
       R.seen[ex] = true;
       if (st.t === 'time') {
         opt.delay = 800; opt.gap = 2200;
         if (st.sec < 300) opt.until = function () { var s = R.steps[R.i]; return s === st && !R.paused && (st.sec * 1000 + R.extra - (now() - R.t0step)) > 6000; };
+        if (brOn && F.HOLDS.indexOf(ex) >= 0) { var tk = CO.tok + 1; opt.done = function () { paceBreath(st, tk); }; }
       }
     }
     if (lines.length) coachPlay(lines, opt);
@@ -667,8 +704,14 @@
     var cyc = d[0] + d[1] + d[2] + d[3], el = (now() - tm.t0) / 1000, k = Math.floor(el / cyc), x = el - k * cyc, ph = 0, acc = 0, names = ['Опускание', 'Пауза', 'Подъём', 'Пауза вверху'];
     for (var i = 0; i < 4; i++) { if (d[i] === 0) continue; if (x < acc + d[i]) { ph = i; break; } acc += d[i]; ph = i; }
     var left = acc + d[ph] - x;
-    if (k > tm.k) { tm.k = k; R.reps = Math.min(99, k); setText('rp', String(R.reps)); F.audio.say(String(R.reps)); }
-    if (ph !== tm.ph) { tm.ph = ph; F.audio.beep([520, 700, 880, 700][ph], 80); }
+    var cnt = '';
+    if (k > tm.k) { tm.k = k; R.reps = Math.min(99, k); setText('rp', String(R.reps)); cnt = String(R.reps); }
+    if (ph !== tm.ph) {
+      tm.ph = ph; F.audio.beep([520, 700, 880, 700][ph], 80);
+      /* дыхание: вдох на первой фазе (опускание), выдох на усилии (подъём) */
+      var word = S.s.breath === false ? '' : (ph === 0 ? 'Вдох' : (ph === 2 ? 'Выдох' : ''));
+      if (cnt || word) F.audio.say((cnt ? cnt + '. ' : '') + word);
+    } else if (cnt) F.audio.say(cnt);
     var box = $('#tph'); if (box) box.innerHTML = '<b>' + names[ph] + ' ' + Math.ceil(left) + '</b> <button class="btn small line" data-a="tmOff">Выключить</button>';
     var bar = $('#tpb'); if (bar) bar.style.width = (x / cyc * 100).toFixed(1) + '%';
   }

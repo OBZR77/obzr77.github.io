@@ -1,6 +1,6 @@
 /* Форма: офлайн-кэш. Версию CACHE менять при каждом выпуске. */
-const CACHE = 'forma-v2';
-const FILES = ["./", "css/app.css", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "index.html", "js/app.js", "js/core.js", "js/data.js", "manifest.webmanifest", "media/climber/1.jpg", "media/climber/2.jpg", "media/climber/3.jpg", "media/climber/4.jpg", "media/pushup/1.jpg", "media/pushup/2.jpg", "media/pushup/3.jpg", "media/pushup/4.jpg", "media/squat/1.jpg", "media/squat/2.jpg", "media/squat/3.jpg", "media/squat/4.jpg", "media/squat/5.jpg"];
+const CACHE = 'forma-v4';
+const FILES = ["./", "css/app.css", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "index.html", "js/app.js", "js/core.js", "js/data.js", "js/det.js", "manifest.webmanifest", "media/climber/1.jpg", "media/climber/2.jpg", "media/climber/3.jpg", "media/climber/4.jpg", "media/pushup/1.jpg", "media/pushup/2.jpg", "media/pushup/3.jpg", "media/pushup/4.jpg", "media/squat/1.jpg", "media/squat/2.jpg", "media/squat/3.jpg", "media/squat/4.jpg", "media/squat/5.jpg"];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
 });

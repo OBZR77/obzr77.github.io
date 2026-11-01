@@ -146,6 +146,9 @@
   function strengthPreview(items) { return items.map(function (it) { var e = E[it.ex]; return { ex: it.ex, txt: (it.sets + ' × ' + (it.sec ? it.sec[0] + (it.sec[1] !== it.sec[0] ? '–' + it.sec[1] : '') + ' с' : it.reps[0] + (it.reps[1] !== it.reps[0] ? '–' + it.reps[1] : '')) + (it.side ? ' на сторону' : '') + (it.tempo ? ' · ' + it.tempo : '')) }; }); }
 
   function lightSession(w, d) {
+    var r = lightSession0(w, d); r.opt = true; return r;
+  }
+  function lightSession0(w, d) {
     var wi = F.weekInfo(w);
     return mk(w + '-' + d, 'light', 'Лёгкий день', 'Подвижность 10 мин, быстрая ходьба 30 мин' + (w >= 1 ? ', мини-подходы подтягиваний' : ''), 45,
       F.mobility.map(function (m) { return { ex: m.ex, txt: m.reps ? m.reps + ' повт.' + (m.side ? ' на сторону' : '') : m.sec + ' с' + (m.side ? ' на сторону' : '') }; }).concat([{ ex: 'walk', txt: '30 мин, зона 1–2' }]).concat(w >= 1 ? [{ ex: 'minipull', txt: F.miniPull[wi.block] }] : []),
@@ -318,14 +321,14 @@
   }
   F.isDone = isDone;
   F.weekProgress = function (w) {
-    var sl = F.slots(w), n = 0;
-    sl.forEach(function (x) { if (isDone(x.sess.id)) n++; });
-    return { done: n, total: sl.length, slots: sl };
+    var sl = F.slots(w), n = 0, req = 0;
+    sl.forEach(function (x) { if (x.sess.opt) return; req++; if (isDone(x.sess.id)) n++; });
+    return { done: n, total: req, slots: sl };
   };
   /* ближайшее невыполненное занятие текущей недели */
   F.nextSlot = function (w) {
     var sl = F.slots(w);
-    for (var i = 0; i < sl.length; i++) if (!isDone(sl[i].sess.id)) return sl[i];
+    for (var i = 0; i < sl.length; i++) if (!sl[i].sess.opt && !isDone(sl[i].sess.id)) return sl[i];
     return null;
   };
   F.programPct = function () {
