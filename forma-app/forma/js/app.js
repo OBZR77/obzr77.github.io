@@ -10,7 +10,7 @@
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var V = { tab: 'today', week: null, stab: 'over', lg: 'Все', lq: '' };
   var save = function () { store.save(); };
-  var VERSION = '0.2';
+  var VERSION = '0.4';
 
   var ico = function (d, sw) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 2) + '" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; };
   var IC = {
@@ -28,7 +28,8 @@
     up: ico('<path d="M6 15l6-6 6 6"/>', 2.2),
     down: ico('<path d="M6 9l6 6 6-6"/>', 2.2),
     plus: ico('<path d="M12 5v14M5 12h14"/>', 2.2),
-    play: ico('<path d="M7 5l12 7-12 7V5z"/>')
+    play: ico('<path d="M7 5l12 7-12 7V5z"/>'),
+    swap: ico('<path d="M7 7h12l-3-3M17 17H5l3 3"/>', 2)
   };
 
   /* ---------- Тема ---------- */
@@ -199,7 +200,7 @@
     if (!S.mode) {
       return out + '<section class="card"><h2>С чего начнём?</h2><p class="muted">Приложение работает без привязки к дням: пропустили тренировку, сделайте её в любой другой день. Выберите, как заниматься.</p>' +
         '<button class="btn" data-a="startForma">Готовая программа на 12 недель</button><p class="small muted">Составлена для мужчины 50 лет: силовые, кардио, тесты, давление. Подходы и повторы можно менять.</p>' +
-        '<button class="btn line" data-a="startOwn">Своя программа</button><p class="small muted">Соберёте тренировки сами из библиотеки упражнений: подходы, повторы, время, отдых.</p></section>' + quickChips() + safety();
+        '<button class="btn line" data-a="startOwn">Своя программа</button><p class="small muted">Соберёте тренировки сами из библиотеки упражнений: подходы, повторы, время, отдых.</p></section>' + foodCard() + quickChips() + safety();
     }
     if (S.mode === 'own') {
       var c = ownNext();
@@ -208,7 +209,7 @@
         out += '<p class="kicker">Следующая по списку</p>' + sessCard(F.customSession(c), { hero: true });
         if (S.custom.length > 1) out += '<button class="btn line" data-a="tab" data-v="prog">Выбрать другую</button>';
       }
-      return out + '<section class="card flat"><h3>Эта неделя</h3>' + weekStrip() + goalBar() + '</section><h3 class="sec">Быстрые тренировки</h3>' + quickChips() + safety();
+      return out + '<section class="card flat"><h3>Эта неделя</h3>' + weekStrip() + goalBar() + '</section>' + foodCard() + '<h3 class="sec">Быстрые тренировки</h3>' + quickChips() + safety();
     }
     var w = S.pos ? S.pos.week : 0, wi = F.weekInfo(w), p = F.weekProgress(w), nx = F.nextSlot(w);
     out += '<div class="row"><span class="chip">' + (w === 0 ? 'Неделя 0' : 'Неделя ' + w + ' из 12') + '</span><span class="chip plain">' + esc(wi.blockName) + '</span>' + (w > 0 ? '<span class="chip plain">запас ' + wi.rir + '</span>' : '') + (wi.deload ? '<span class="chip warn">разгрузка</span>' : '') + (wi.test ? '<span class="chip warn">тесты</span>' : '') + '</div>';
@@ -222,7 +223,7 @@
     if (nx && days >= 8 && w < 12) out += '<div class="notice">Эта неделя идёт уже ' + days + ' дн. Можно доделать пропущенное или перейти к следующей: невыполненные останутся в разделе «Программа». <button class="link" data-a="nextWeek">К неделе ' + (w + 1) + '</button></div>';
     out += '<section class="card flat"><div class="row between"><h3>Тренировки недели</h3><span class="chip plain">' + p.done + ' из ' + p.total + '</span></div><div class="list">' + p.slots.map(function (x) { return sessRow(x.sess, F.DAYS[x.d]); }).join('') + '</div><p class="small muted">Порядок свободный. Пропущенную тренировку можно сделать в любой день.</p></section>';
     out += '<section class="card flat"><h3>Эта неделя</h3>' + weekStrip() + goalBar() + '</section>';
-    out += '<h3 class="sec">Быстрые тренировки</h3>' + quickChips();
+    out += foodCard() + '<h3 class="sec">Быстрые тренировки</h3>' + quickChips();
     var last = S.meas[S.meas.length - 1];
     if (last) out += '<section class="card flat"><h3>Последние замеры</h3><div class="kv"><span>Дата</span><b>' + esc(D.fmtFull(last.d)) + '</b></div>' + (last.w ? '<div class="kv"><span>Вес</span><b>' + last.w + ' кг</b></div>' : '') + (last.waist ? '<div class="kv"><span>Талия</span><b>' + last.waist + ' см</b></div>' : '') + (last.hr ? '<div class="kv"><span>Пульс покоя</span><b>' + last.hr + '</b></div>' : '') + '</section>';
     return out + safety();
@@ -245,7 +246,8 @@
     }).join('') + '</div>';
   }
   function vProg() {
-    var out = '<header class="top"><p class="kicker">Программа</p><h1>' + (S.mode === 'own' ? 'Мои тренировки' : 'План и тренировки') + '</h1></header>';
+    if (V.pmod === 'food') return vFood();
+    var out = '<header class="top"><p class="kicker">Программа</p><h1>' + (S.mode === 'own' ? 'Мои тренировки' : 'План и тренировки') + '</h1></header>' + progSeg();
     if (S.mode !== 'own') {
       var cur = S.pos ? S.pos.week : 0;
       if (V.week == null) V.week = S.mode ? cur : 0;
@@ -742,6 +744,235 @@
     dialog({ title: 'Выйти из тренировки?', text: 'Прогресс текущего занятия не сохранится, если выйти без сохранения.', btns: btns });
   }
 
+  /* ---------- Питание (версия 0.4): меню, рецепты, покупки ---------- */
+  var FD = F.FOOD, FOODS = FD.foods, RECS = {}, SLOTS = ['b', 'l', 's', 'd'];
+  var SLOT_N = { b: 'Завтрак', l: 'Обед', s: 'Перекус', d: 'Ужин' };
+  var SLOT_PL = { b: 'Завтраки', l: 'Обеды', s: 'Перекусы', d: 'Ужины' };
+  var VEG = ['carrot', 'beet', 'onion', 'cabbage', 'potato', 'tomato', 'cucumber', 'pepper', 'zucchini'];
+  var RK = 1; /* множитель порций в открытом рецепте */
+  FD.recipes.forEach(function (r) { RECS[r.id] = r; });
+  V.pmod = 'train'; V.ntab = 'menu'; V.fday = D.dow(D.today()); V.rslot = 'all';
+
+  var r0 = function (x) { return Math.round(x); };
+  var f1 = function (x) { return (Math.round(x * 10) / 10).toString().replace('.', ','); };
+  function nutr(r, k) {
+    k = k || 1;
+    var t = { kcal: 0, p: 0, f: 0, c: 0, salt: (r.salt || 0) * k, veg: 0 };
+    r.ingr.forEach(function (it) {
+      var f = FOODS[it[0]], x = it[1] * k / 100;
+      t.kcal += f.v[0] * x; t.p += f.v[1] * x; t.f += f.v[2] * x; t.c += f.v[3] * x; t.salt += (f.s || 0) * x;
+      if (f.cat === 'Овощи и фрукты') t.veg += it[1] * k;
+    });
+    return t;
+  }
+  function frac(n) {
+    var w = Math.floor(n + 1e-9);
+    if (Math.abs(n - Math.round(n)) < 1e-6) return String(Math.round(n));
+    if (Math.abs(n - w - 0.5) < 1e-6) return (w ? w + ' ' : '') + '½';
+    return null;
+  }
+  function qty(id, g, k) {
+    var f = FOODS[id], t, n;
+    if (f.piece) {
+      n = g / f.piece; t = frac(n);
+      if (t) return t + ' ' + (f.pn === 'ломтик' ? (n === 1 ? 'ломтик' : (n < 5 ? 'ломтика' : 'ломтиков')) : 'шт') + ' (' + r0(g) + ' г)';
+    }
+    if (f.tsp) { n = g / f.tsp; t = frac(n); if (t) return t + ' ч. л. (' + r0(g) + ' г)'; }
+    return (k === 1 || g < 20 ? r0(g) : r0(g / 5) * 5) + ' г';
+  }
+  function eff(i) {
+    var b = FD.menu[i], o = {};
+    SLOTS.forEach(function (s) { o[s] = (S.food.swap && S.food.swap[i + ':' + s]) || b[s]; });
+    return o;
+  }
+  function dateOf(i) { return D.ymd(D.add(D.monday(D.today()), i)); }
+  function dayTot(i, onlyEaten) {
+    var e = eff(i), eat = S.food.eaten[dateOf(i)] || {}, t = { kcal: 0, p: 0, f: 0, c: 0, salt: 0, veg: 0 };
+    SLOTS.forEach(function (s) { if (onlyEaten && !eat[s]) return; var x = nutr(RECS[e[s]]); for (var k in t) t[k] += x[k]; });
+    return t;
+  }
+  function eatCount(i) { var eat = S.food.eaten[dateOf(i)] || {}; return SLOTS.filter(function (s) { return eat[s]; }).length; }
+
+  /* список покупок: округление до упаковки */
+  function buy(id, g) {
+    var f = FOODS[id], n, r;
+    if (id === 'egg') { n = Math.ceil(g / f.piece - 1e-9); var pack = Math.ceil(n / 10) * 10; return pack + ' шт (нужно ' + n + ')'; }
+    if (id === 'apple') return Math.ceil(g / 150 - 1e-9) + ' шт';
+    if (id === 'banana') return Math.ceil(g / 100 - 1e-9) + ' шт';
+    if (id === 'bread') return Math.ceil(g / 50 - 1e-9) * 50 + ' г (около ' + Math.ceil(g / 30 - 1e-9) + ' ломтиков)';
+    if (id === 'oil') return Math.ceil(g / 0.92 / 50 - 1e-9) * 50 + ' мл';
+    var gg = VEG.indexOf(id) >= 0 ? g * 1.1 : g, step = gg < 300 ? 50 : 100;
+    r = Math.ceil(gg / step - 1e-9) * step;
+    return r >= 1000 ? (r / 1000).toString().replace('.', ',') + ' кг' : r + ' г';
+  }
+  function shopList() {
+    var need = {}, m = S.food.people || 1;
+    for (var i = 0; i < 7; i++) { var e = eff(i); SLOTS.forEach(function (s) { RECS[e[s]].ingr.forEach(function (it) { need[it[0]] = (need[it[0]] || 0) + it[1]; }); }); }
+    return Object.keys(need).map(function (id) { var g = need[id] * m; return { id: id, name: FOODS[id].n, cat: FOODS[id].cat, g: g, buy: buy(id, g) }; });
+  }
+
+  /* ---------- Экран «Программа → Питание» ---------- */
+  function progSeg() {
+    return '<div class="seg" role="group" aria-label="Что показать">' + [['train', 'Тренировки'], ['food', 'Питание']].map(function (x) { return '<button data-a="pmod" data-v="' + x[0] + '" aria-pressed="' + (V.pmod === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
+  }
+  function vFood() {
+    var out = '<header class="top"><p class="kicker">Программа</p><h1>Питание</h1></header>' + progSeg() +
+      '<div class="seg scroll" role="group" aria-label="Раздел питания">' + [['menu', 'Меню'], ['rec', 'Рецепты'], ['shop', 'Покупки'], ['info', 'Принципы']].map(function (x) { return '<button data-a="ntab" data-v="' + x[0] + '" aria-pressed="' + (V.ntab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
+    if (V.ntab === 'menu') out += foodMenu();
+    else if (V.ntab === 'rec') out += foodRecipes();
+    else if (V.ntab === 'shop') out += foodShop();
+    else out += foodInfo();
+    return out;
+  }
+  function bar(p) { return '<div class="mini"><i style="width:' + Math.max(0, Math.min(100, p)) + '%"></i></div>'; }
+  function mealRow(i, s, withSwap) {
+    var e = eff(i), id = e[s], r = RECS[id], t = nutr(r), date = dateOf(i), on = !!(S.food.eaten[date] || {})[s], sw = !!(S.food.swap && S.food.swap[i + ':' + s]);
+    return '<div class="srow"><button class="cbbtn" data-a="eat" data-day="' + i + '" data-s="' + s + '" aria-pressed="' + on + '" aria-label="Отметить: ' + esc(SLOT_N[s]) + '"><span class="cb' + (on ? ' on' : '') + '">' + (on ? '✓' : '') + '</span></button>' +
+      '<button class="grow tt" data-a="rec" data-id="' + id + '"><div class="s">' + SLOT_N[s] + (sw ? ' · заменено' : '') + '</div><div class="t">' + esc(r.name) + '</div><div class="s">' + r0(t.kcal) + ' ккал · белок ' + r0(t.p) + ' г · ' + r.min + ' мин</div></button>' +
+      (withSwap ? '<button class="iconbtn sm" data-a="swap" data-day="' + i + '" data-s="' + s + '" aria-label="Заменить блюдо: ' + esc(SLOT_N[s]) + '">' + IC.swap + '</button>' : '') + '</div>';
+  }
+  function foodMenu() {
+    var i = V.fday, bm = FD.menu[i], plan = dayTot(i), got = dayTot(i, true), n = eatCount(i);
+    var chips = F.DAYS.map(function (d, k) { return '<button class="wk' + (k === D.dow(D.today()) ? ' now' : '') + (eatCount(k) === 4 ? ' full' : '') + '" data-a="fday" data-v="' + k + '" aria-pressed="' + (k === i) + '">' + d + '</button>'; }).join('');
+    var out = '<div class="chips" role="group" aria-label="Дни недели">' + chips + '</div>';
+    out += '<section class="card"><div class="row between"><h2>' + esc(bm.day) + ', ' + D.fmt(D.add(D.monday(D.today()), i)) + '</h2><span class="chip' + (n === 4 ? ' ok' : ' plain') + '">съедено ' + n + ' из 4</span></div>' +
+      '<div class="goal"><div class="row between"><span class="small muted">Энергия, оценка</span><b>' + r0(got.kcal) + ' / ' + r0(plan.kcal) + ' ккал</b></div>' + bar(got.kcal / plan.kcal * 100) + '</div>' +
+      '<div class="goal"><div class="row between"><span class="small muted">Белок, ориентир 110–130 г</span><b>' + r0(got.p) + ' / ' + r0(plan.p) + ' г</b></div>' + bar(got.p / plan.p * 100) + '</div>' +
+      '<div class="list">' + SLOTS.map(function (s) { return mealRow(i, s, true); }).join('') + '</div>' +
+      '<p class="small muted">Нажмите на кружок, когда поели. Название открывает рецепт. Завтрак не раньше чем через 3 часа после подъёма, ужин за 3 часа до сна.' + (bm.train ? ' В тренировочный день перекус съешьте в течение 1–2 часов после занятия.' : '') + '</p></section>';
+    out += '<section class="card flat"><h3>День в цифрах (по плану)</h3>' +
+      '<div class="nut4"><div><b>' + r0(plan.kcal) + '</b><span>ккал</span></div><div><b>' + r0(plan.p) + '</b><span>белок, г</span></div><div><b>' + r0(plan.f) + '</b><span>жир, г</span></div><div><b>' + r0(plan.c) + '</b><span>углев., г</span></div></div>' +
+      '<div class="kv"><span>Овощи и фрукты (норма от 400 г)</span><b>' + r0(plan.veg / 10) * 10 + ' г</b></div><div class="kv"><span>Соль, оценка (норма менее 5 г)</span><b>' + f1(plan.salt) + ' г</b></div>' +
+      '<p class="small muted">Числа оценочные: ошибка 10–15%. Это не лечебная диета.</p></section>';
+    var hasSwap = Object.keys(S.food.swap || {}).length > 0;
+    if (hasSwap) out += '<button class="btn line" data-a="menuReset">Вернуть меню по умолчанию</button>';
+    return out;
+  }
+  function foodRecipes() {
+    var chips = [['all', 'Все']].concat(SLOTS.map(function (s) { return [s, SLOT_PL[s]]; })).map(function (x) { return '<button class="wk wide" data-a="rslot" data-v="' + x[0] + '" aria-pressed="' + (V.rslot === x[0]) + '">' + x[1] + '</button>'; }).join('');
+    var rows = FD.recipes.filter(function (r) { return V.rslot === 'all' || r.slot === V.rslot; }).map(function (r) {
+      var t = nutr(r);
+      return '<button class="item" data-a="rec" data-id="' + r.id + '"><div class="grow"><div class="t">' + esc(r.name) + '</div><div class="s">' + SLOT_N[r.slot] + ' · ' + r0(t.kcal) + ' ккал · белок ' + r0(t.p) + ' г · ' + r.min + ' мин</div></div><span class="muted">›</span></button>';
+    }).join('');
+    return '<div class="chips" role="group" aria-label="Приём пищи">' + chips + '</div><section class="card"><div class="list">' + rows + '</div></section><p class="small muted">Все рецепты на одну порцию. Внутри можно изменить число порций, количества пересчитаются.</p>';
+  }
+  function foodShop() {
+    var list = shopList(), got = 0, m = S.food.people || 1;
+    list.forEach(function (x) { if (S.food.shop[x.id]) got++; });
+    var out = '<section class="card"><div class="row between"><h2>На неделю</h2><span class="chip plain">куплено ' + got + ' из ' + list.length + '</span></div>' + bar(got / list.length * 100) +
+      '<div class="cfgrow"><span>Едоков <i class="small muted">количества умножаются</i></span><span class="stp"><button data-a="people" data-d="-1" aria-label="Меньше">−</button><output>' + m + '</output><button data-a="people" data-d="1" aria-label="Больше">+</button></span></div>' +
+      '<div class="row"><button class="btn small ghost" data-a="shopCopy">Копировать список</button><button class="btn small line" data-a="shopReset">Снять отметки</button></div></section>';
+    FD.cats.forEach(function (cat) {
+      var items = list.filter(function (x) { return x.cat === cat; }); if (!items.length) return;
+      out += '<section class="card"><h3>' + esc(cat) + '</h3><div class="list">' + items.map(function (x) {
+        var on = !!S.food.shop[x.id];
+        return '<button class="srow shopi' + (on ? ' got' : '') + '" data-a="shopTog" data-k="' + x.id + '" aria-pressed="' + on + '"><span class="cb' + (on ? ' on' : '') + '">' + (on ? '✓' : '') + '</span><span class="grow tt"><span class="t">' + esc(x.name) + '</span><span class="s block">по меню ' + r0(x.g) + ' г</span></span><b class="buy">' + esc(x.buy) + '</b></button>';
+      }).join('') + '</div></section>';
+    });
+    out += '<section class="card flat"><h3>Проверьте дома</h3><p class="small muted">Соль (не более 5 г в сутки на всё), чёрный перец, паприка, зира для плова, лавровый лист, чеснок, лимон, зелень. Овощи, картофель и капуста даны с запасом 10% на очистки. Ягоды и брокколи можно брать замороженными.</p></section>';
+    return out;
+  }
+  function foodInfo() {
+    var kv = function (a, b, c) { return '<div class="kv"><span>' + a + (c ? '<div class="small muted">' + c + '</div>' : '') + '</span><b>' + b + '</b></div>'; };
+    var li = function (a) { return '<ul class="ul">' + a.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>'; };
+    var out = '<section class="card"><h2>Ориентиры</h2>' +
+      kv('Энергия', '2100–2300 ккал', 'оценка: расход 2470–2720 минус 300–500; проверка по весу и талии') +
+      kv('Белок', '110–130 г', '1,35–1,6 г на кг; порции 30–40 г в основных приёмах') +
+      kv('Овощи и фрукты', 'от 400 г', 'ВОЗ; в меню 700–910 г') +
+      kv('Соль', 'менее 5 г', 'ВОЗ; считается и соль хлеба, сыра, мяса') +
+      kv('Рыба', '2 раза в неделю', 'AHA 2018; в меню 3 раза') +
+      kv('Жиры', 'около 30%', 'энергии; ВОЗ менее 30%') + '</section>';
+    out += '<section class="card"><h3>Ритм дня</h3>' + li(['Завтрак через 3 часа и больше после подъёма.', 'Обед через 3–4 часа после завтрака, самый большой приём.', 'Перекус со сладким заложен каждый день; в тренировочный день сразу после занятия.', 'Ужин не позже чем за 3 часа до сна; если не успеваете, запеканка d3 или салат d5.']) + '</section>';
+    out += '<section class="card"><h3>Соль и давление</h3><p class="small muted">Давление 130/85 относится к категории «высокое нормальное». Диетические подходы (DASH, средиземноморский, северный) снижали давление в среднем на 4,3/2,4 мм рт. ст. (Ndanuko, 2016). Меню построено на овощах, цельных крупах, рыбе, кисломолочных продуктах и с малым количеством соли.</p>' +
+      li(['Солите в конце и щепоткой.', 'Скрытая соль: хлеб, сыр, колбасы, консервы, соленья, соусы.', 'На упаковке соль = натрий × 2,5.', 'Специи без соли: перец, паприка, зира, лимон, чеснок, зелень.', 'Домашнее давление измерьте до интервалов; при среднем от 135/85 сначала врач.']) + '</section>';
+    out += '<section class="card"><h3>Сладкое</h3>' + li(['Одна порция сладкого в день уже в плане: шоколад 70% (20 г), мёд, банан, ягоды.', 'Шоколад отмеряйте заранее в контейнер.', 'Сорвались: ничего не «отрабатывайте», следующий приём по плану.']) + '</section>';
+    out += '<section class="card"><h3>Корректировка раз в 2 недели</h3>' + li(['Вес падает на 0,25–0,5 кг в неделю, талия уменьшается: ничего не менять.', 'Вес и талия стоят при выполнении меню: убрать 150–200 ккал (2 ломтика хлеба или 2 ч. л. масла). Ниже 2000 ккал самостоятельно не опускаться.', 'Вес падает быстрее 0,7 кг в неделю, слабость, упали веса: добавить 150–200 ккал (картофель, крупа, банан).', 'Головокружение, сильная слабость, боль в груди: это не вопрос меню, остановиться и к врачу.']) + '<p class="small muted">Взвешивание утром до еды, 3 раза в неделю, среднее за неделю. Талия раз в неделю.</p></section>';
+    out += '<div class="notice">Это не лечебная диета и не диагноз. Калории и белок посчитаны по справочным значениям продуктов, ошибка 10–15%. При диабете, болезнях почек, сердца, ЖКТ меню согласуйте с врачом. Подробности, расчёты и таблицы в Word «Программа питания».</div>';
+    out += '<section class="card flat"><h3>Источники</h3><div class="stack small">' + [
+      ['ВОЗ: здоровое питание (овощи и фрукты 400 г, соль менее 5 г, сахар, жиры)', 'https://who.int/europe/news-room/fact-sheets/item/nutrition---maintaining-a-healthy-lifestyle'],
+      ['ВОЗ 2013: натрий менее 2 г, калий не менее 3,5 г', 'https://www.news-medical.net/news/20130131/Adults-should-consume-less-than-5-g-of-salt-and-at-least-3510-mg-of-potassium-per-day-WHO.aspx'],
+      ['Ndanuko 2016: диета и давление (мета-анализ)', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4717885'],
+      ['AHA 2018: рыба дважды в неделю', 'https://www.sciencedaily.com/releases/2018/05/180517081837.htm'],
+      ['Белок в пожилом возрасте и при снижении веса', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10272976']
+    ].map(function (x) { return '<a href="' + x[1] + '" target="_blank" rel="noopener">' + esc(x[0]) + '</a>'; }).join('') + '</div></section>';
+    return out;
+  }
+  function foodCard() {
+    var i = D.dow(D.today()), n = eatCount(i), got = dayTot(i, true), plan = dayTot(i);
+    return '<section class="card flat"><div class="row between"><h3>Питание сегодня</h3><span class="chip' + (n === 4 ? ' ok' : ' plain') + '">' + n + ' из 4</span></div>' +
+      '<div class="list">' + SLOTS.map(function (s) { return mealRow(i, s, false); }).join('') + '</div>' +
+      '<div class="goal"><div class="row between"><span class="small muted">Съедено, оценка</span><b>' + r0(got.kcal) + ' ккал · белок ' + r0(got.p) + ' г</b></div>' + bar(got.kcal / plan.kcal * 100) + '</div>' +
+      '<button class="link" data-a="foodOpen">Меню на неделю, рецепты, покупки</button></section>';
+  }
+
+  /* рецепт */
+  function openRecipe(id) { RK = 1; var el = document.createElement('div'); el.dataset.rid = id; fillRecipe(el, id); pushOv(el, 'rec'); }
+  function fillRecipe(el, id) {
+    var r = RECS[id], t = nutr(r, RK), keep = el.scrollTop;
+    el.innerHTML = '<div class="sheet"><div class="bar"><button class="iconbtn" data-a="back" aria-label="Назад">' + IC.back + '</button><div class="grow"><div class="small muted">' + SLOT_N[r.slot] + ' · ' + r.id + '</div><h2>' + esc(r.name) + '</h2></div></div>' +
+      '<section class="card"><div class="nut4"><div><b>' + r0(t.kcal) + '</b><span>ккал</span></div><div><b>' + r0(t.p) + '</b><span>белок, г</span></div><div><b>' + r0(t.f) + '</b><span>жир, г</span></div><div><b>' + r0(t.c) + '</b><span>углев., г</span></div></div>' +
+      '<div class="row"><span class="chip plain">' + r.min + ' мин</span><span class="chip plain">соль ≈ ' + f1(t.salt) + ' г</span>' + (r.batch ? '<span class="chip">можно варить на ' + r.batch + ' порции</span>' : '') + '</div>' +
+      '<div class="cfgrow"><span>Порции</span><span class="stp"><button data-a="rkMinus" data-id="' + id + '" aria-label="Меньше">−</button><output>' + frac(RK) + '</output><button data-a="rkPlus" data-id="' + id + '" aria-label="Больше">+</button></span></div>' +
+      '<p class="small muted">Числа оценочные (ошибка 10–15%), на ' + (RK === 1 ? 'одну порцию' : frac(RK) + ' порции') + '.</p></section>' +
+      '<section class="card"><h3>Продукты</h3><div class="list">' + r.ingr.map(function (it) { return '<div class="kv"><span>' + esc(FOODS[it[0]].n) + '</span><b>' + esc(qty(it[0], it[1] * RK, RK)) + '</b></div>'; }).join('') + '</div></section>' +
+      '<section class="card det"><h3>Приготовление</h3><ol>' + r.steps.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol></section>' +
+      (r.tip ? '<div class="notice info">' + esc(r.tip) + '</div>' : '') + '</div>';
+    el.scrollTop = keep;
+  }
+  function rkChange(id, d) {
+    var n = Math.round((RK + d) * 2) / 2; RK = Math.max(0.5, Math.min(8, n));
+    var el = document.querySelector('[data-rid="' + id + '"]'); if (el) fillRecipe(el, id);
+  }
+
+  /* замена блюда в меню */
+  function openSwap(i, s) {
+    var el = document.createElement('div'), cur = eff(i)[s];
+    el.innerHTML = '<div class="sheet"><div class="bar"><button class="iconbtn" data-a="back" aria-label="Назад">' + IC.back + '</button><div class="grow"><div class="small muted">' + esc(FD.menu[i].day) + ' · ' + SLOT_N[s] + '</div><h2>Заменить блюдо</h2></div></div>' +
+      '<section class="card"><div class="list">' + FD.recipes.filter(function (r) { return r.slot === s; }).map(function (r) {
+        var t = nutr(r);
+        return '<button class="item" data-a="swapTo" data-day="' + i + '" data-s="' + s + '" data-id="' + r.id + '"><div class="grow"><div class="t">' + esc(r.name) + '</div><div class="s">' + r0(t.kcal) + ' ккал · белок ' + r0(t.p) + ' г · ' + r.min + ' мин</div></div>' + (r.id === cur ? '<span class="chip ok">сейчас</span>' : '<span class="muted">›</span>') + '</button>';
+      }).join('') + '</div></section><p class="small muted">Замена сохраняется для этого дня недели во всех неделях, список покупок пересчитается.</p></div>';
+    pushOv(el, 'swap');
+  }
+
+  var FA = {
+    pmod: function (el) { V.pmod = el.dataset.v; render(); },
+    ntab: function (el) { V.ntab = el.dataset.v; render(); window.scrollTo(0, 0); },
+    fday: function (el) { V.fday = +el.dataset.v; render(); },
+    rslot: function (el) { V.rslot = el.dataset.v; render(); },
+    foodOpen: function () { V.tab = 'prog'; V.pmod = 'food'; V.ntab = 'menu'; V.fday = D.dow(D.today()); render(); window.scrollTo(0, 0); },
+    eat: function (el) {
+      var d = dateOf(+el.dataset.day), s = el.dataset.s, m = S.food.eaten[d] || (S.food.eaten[d] = {});
+      if (m[s]) delete m[s]; else m[s] = true;
+      if (!Object.keys(m).length) delete S.food.eaten[d];
+      save(); render();
+    },
+    rec: function (el) { openRecipe(el.dataset.id); },
+    rkPlus: function (el) { rkChange(el.dataset.id, 0.5); },
+    rkMinus: function (el) { rkChange(el.dataset.id, -0.5); },
+    swap: function (el) { openSwap(+el.dataset.day, el.dataset.s); },
+    swapTo: function (el) {
+      var i = +el.dataset.day, s = el.dataset.s, id = el.dataset.id, key = i + ':' + s;
+      if (FD.menu[i][s] === id) delete S.food.swap[key]; else S.food.swap[key] = id;
+      save(); closeTop(true); toast('Меню обновлено');
+    },
+    menuReset: function () {
+      dialog({ title: 'Вернуть меню по умолчанию?', text: 'Все замены блюд будут отменены, список покупок вернётся к исходному. Отметки «съедено» сохранятся.', btns: [{ t: 'Вернуть', fn: function () { S.food.swap = {}; save(); render(); } }, { t: 'Отмена', cls: 'line' }] });
+    },
+    people: function (el) { S.food.people = Math.max(1, Math.min(6, (S.food.people || 1) + +el.dataset.d)); save(); render(); },
+    shopTog: function (el) { var k = el.dataset.k; if (S.food.shop[k]) delete S.food.shop[k]; else S.food.shop[k] = true; save(); render(); },
+    shopReset: function () { S.food.shop = {}; save(); render(); },
+    shopCopy: function () {
+      var lines = ['Список покупок на неделю' + ((S.food.people || 1) > 1 ? ' (на ' + S.food.people + ')' : '')], list = shopList();
+      FD.cats.forEach(function (cat) {
+        var items = list.filter(function (x) { return x.cat === cat; }); if (!items.length) return;
+        lines.push('', cat); items.forEach(function (x) { lines.push('☐ ' + x.name + ' — ' + x.buy); });
+      });
+      var text = lines.join('\n'), manual = function () { dialog({ title: 'Список покупок', html: '<textarea readonly id="shopTxt" aria-label="Список покупок">' + esc(text) + '</textarea><p class="small muted">Выделите текст и скопируйте.</p>', btns: [{ t: 'Закрыть' }] }); var t = $('#shopTxt'); if (t) { t.focus(); t.select(); } };
+      try { navigator.clipboard.writeText(text).then(function () { toast('Список скопирован'); }, manual); } catch (e) { manual(); }
+    }
+  };
+
   /* ---------- Действия ---------- */
   function setPos(w) { S.pos = { week: Math.max(0, Math.min(12, w)), since: D.ymd(D.today()) }; V.week = null; save(); }
   function refreshTopSess() {
@@ -890,6 +1121,7 @@
     rSave: function () { saveRun(); }
   };
 
+  Object.keys(FA).forEach(function (k) { A[k] = FA[k]; });
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-a]'); if (!el) return;
     var f = A[el.dataset.a]; if (!f) return;

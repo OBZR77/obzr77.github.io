@@ -255,3 +255,22 @@ button svg, .btn svg, .link svg, .chip svg { width: 20px; height: 20px; flex: no
 .overlay { overflow-x: hidden; max-width: 100%; }
 .overlay > .sheet, .card, .cuebox { min-width: 0; }
 .det p, .det li, .cues li, .rtitle, .rsub, .notice { overflow-wrap: anywhere; }
+
+/* Версия 0.4: питание */
+.nut4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.nut4 > div { text-align: center; background: var(--surface2); border-radius: 12px; padding: 8px 2px; min-width: 0; }
+.nut4 b { display: block; font-size: 19px; color: var(--accent); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.nut4 span { font-size: 11px; color: var(--muted); }
+.cbbtn { background: none; border: 0; padding: 8px 6px 8px 0; display: grid; place-items: center; flex: none; }
+.srow .s.block, .block { display: block; }
+.srow.shopi { width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; }
+.srow.shopi .tt { display: block; }
+.srow.got .t { text-decoration: line-through; color: var(--muted); }
+.srow.got .buy { color: var(--muted); font-weight: 500; }
+.buy { font-size: 14px; text-align: right; max-width: 45%; overflow-wrap: anywhere; }
+.ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 15px; }
+.dlg > div { max-height: 90dvh; overflow-y: auto; }
+.dlg textarea { min-height: 220px; font-size: 13px; }
+.kv > span { min-width: 0; overflow-wrap: anywhere; }
+.kv > b { text-align: right; flex: none; max-width: 55%; overflow-wrap: anywhere; }
+@media (max-width: 380px) { .seg button { padding: 8px 9px; font-size: 13.5px; } }

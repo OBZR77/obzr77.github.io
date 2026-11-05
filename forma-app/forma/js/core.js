@@ -10,7 +10,8 @@
       v: 2,
       s: { start: null, voice: true, coach: 'full', beep: true, wake: true, theme: 'auto', bands: false, age: 50, hrRest: 60, goalMin: 30 },
       mode: null, pos: null, cycle: 1, over: {}, custom: [], nid: 1,
-      log: [], meas: [], bp: [], tests: {}, loads: {}, last: {}, checks: {}, bpAck: false
+      log: [], meas: [], bp: [], tests: {}, loads: {}, last: {}, checks: {}, bpAck: false,
+      food: { eaten: {}, swap: {}, shop: {}, people: 1 }
     };
   }
   function merge(a, b) {
